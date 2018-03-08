@@ -226,7 +226,7 @@ class BiAttn(object):
             sim = tf.squeeze(tf.layers.dense(s, 1, use_bias=False), axis=3) # (batch_size, N, M)
 
             a_mask = tf.expand_dims(values_mask, 1) # shape (batch_size, 1, M)
-            _, a_dist = masked_softmax(sim, values_mask, 1) # (batch_size, N, M)
+            _, a_dist = masked_softmax(sim, a_mask, 1) # (batch_size, N, M)
 
             _, b_dist = masked_softmax(tf.reduce_max(sim, 2), keys_mask, 1) # shape (batch_size, N)
             b_dist = tf.expand_dims(b_dist, 1) # (batch_size, 1, N)
