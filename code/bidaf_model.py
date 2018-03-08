@@ -65,7 +65,7 @@ class SingleBiDAFModel(QAModel):
         blended_reps = tf.concat([context_hiddens, U_tilde, context_hiddens * U_tilde, context_hiddens * H_tilde], axis=2) # (batch_size, context_len, hidden_size*8)
 
         with vs.variable_scope("M1"):
-            # Bidrectional GRU M2
+            # Bidirectional GRU M1
             modeling_layer = RNNEncoder(self.FLAGS.hidden_size, self.keep_prob)
             blended_reps_1 = modeling_layer.build_graph(blended_reps, self.context_mask) # (batch_size, N, 2h)
 

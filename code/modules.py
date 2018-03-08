@@ -176,16 +176,6 @@ class BasicAttn(object):
 
 class BiAttn(object):
     """Module for bidirectional attention.
-
-    Note: in this module we use the terminology of "keys" and "values" (see lectures).
-    In the terminology of "X attends to Y", "keys attend to values".
-
-    In the baseline model, the keys are the context hidden states
-    and the values are the question hidden states.
-
-    We choose to use general terminology of keys and values in this module
-    (rather than context and question) to avoid confusion if you reuse this
-    module with other inputs.
     """
 
     def __init__(self, keep_prob, key_vec_size, value_vec_size):
@@ -216,9 +206,60 @@ class BiAttn(object):
 
         """
         with vs.variable_scope("BiAttn"):
-            M = values.get_shape()[1]
-            N = keys.get_shape()[1]
+            values_aug = tf.expand_dims(values, 1)
+            keys_aug = tf.expand_dims(keys, 2)
 
+            pa = tf.layers.dense(values_aug, 1, use_bias=False, activation=None)
+            pb = tf.layers.dense(keys_aug, 1, use_bias=False, activation=None)
+            pc = tf.layers.dense(values_aug * keys_aug, 1, use_bias=False, activation=None)
+
+            sim = tf.squeeze(pa + pb + pc, axis=3) # (batch_size, N, M)
+
+            a_mask = tf.expand_dims(values_mask, 1) # shape (batch_size, 1, M)
+            _, a_dist = masked_softmax(sim, a_mask, 1) # (batch_size, N, M)
+            U_tilde = tf.matmul(a_dist, values) # matmul( (batch_size, N, M), (batch_size, M, 2h) ) = (batch_size, N, 2h)
+
+            _, b_dist = masked_softmax(tf.reduce_max(sim, 2), keys_mask, 1) # shape (batch_size, N)
+            H_tilde = tf.matmul(tf.expand_dims(b_dist, 1), keys) # matmul((batch_size, 1, N), (batch_size, N, 2h)) = (batch_size, 1, 2h)
+
+            U_tilde_output = tf.nn.dropout(U_tilde, self.keep_prob)
+            H_tilde_output = tf.nn.dropout(H_tilde, self.keep_prob)
+
+            return a_dist, U_tilde_output, b_dist, H_tilde_output
+
+
+class BiKeepAttn(object):
+    """Module for bidirectional attention that maintains the H_tilde size.
+    """
+
+    def __init__(self, keep_prob, key_vec_size, value_vec_size):
+        """
+        Inputs:
+          keep_prob: tensor containing a single scalar that is the keep probability (for dropout)
+          key_vec_size: size of the key vectors. int
+          value_vec_size: size of the value vectors. int
+        """
+        self.keep_prob = keep_prob
+        self.key_vec_size = key_vec_size
+        self.value_vec_size = value_vec_size
+
+    def build_graph(self, values, values_mask, keys, keys_mask):
+        """
+        Keys attend to values.
+        For each key, return an attention distribution and an attention output vector.
+
+        Inputs:
+          values: Tensor shape (batch_size, num_values, value_vec_size).
+          values_mask: Tensor shape (batch_size, num_values).
+            1s where there's real input, 0s where there's padding
+          keys: Tensor shape (batch_size, num_keys, key_vec_size)
+          keys_mask: Tensor shape (batch_size, num_keys).
+            1s where there's real input, 0s where there's padding
+
+        Outputs:
+
+        """
+        with vs.variable_scope("BiKeepAttn"):
             values_aug = tf.expand_dims(values, 1)
             keys_aug = tf.expand_dims(keys, 2)
 
