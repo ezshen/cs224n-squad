@@ -114,7 +114,6 @@ class SimpleSoftmaxLayer(object):
 
             return masked_logits, prob_dist
 
-
 class BasicAttn(object):
     """Module for basic attention.
 
@@ -174,6 +173,71 @@ class BasicAttn(object):
             output = tf.nn.dropout(output, self.keep_prob)
 
             return attn_dist, output
+
+class BiAttn(object):
+    """Module for bidirectional attention.
+
+    Note: in this module we use the terminology of "keys" and "values" (see lectures).
+    In the terminology of "X attends to Y", "keys attend to values".
+
+    In the baseline model, the keys are the context hidden states
+    and the values are the question hidden states.
+
+    We choose to use general terminology of keys and values in this module
+    (rather than context and question) to avoid confusion if you reuse this
+    module with other inputs.
+    """
+
+    def __init__(self, keep_prob, key_vec_size, value_vec_size):
+        """
+        Inputs:
+          keep_prob: tensor containing a single scalar that is the keep probability (for dropout)
+          key_vec_size: size of the key vectors. int
+          value_vec_size: size of the value vectors. int
+        """
+        self.keep_prob = keep_prob
+        self.key_vec_size = key_vec_size
+        self.value_vec_size = value_vec_size
+
+    def build_graph(self, values, values_mask, keys, keys_mask):
+        """
+        Keys attend to values.
+        For each key, return an attention distribution and an attention output vector.
+
+        Inputs:
+          values: Tensor shape (batch_size, num_values, value_vec_size).
+          values_mask: Tensor shape (batch_size, num_values).
+            1s where there's real input, 0s where there's padding
+          keys: Tensor shape (batch_size, num_keys, key_vec_size)
+          keys_mask: Tensor shape (batch_size, num_keys).
+            1s where there's real input, 0s where there's padding
+
+        Outputs:
+
+        """
+        with vs.variable_scope("BiAttn"):
+            M = values.get_shape()[1]
+            N = keys.get_shape()[1]
+
+            values_aug = tf.transpose(tf.tile(tf.expand_dims(values, 3), [1, 1, 1, N]), perm=[0, 3, 1, 2]) # (batch_size, N, M, 2h)
+            keys_aug = tf.transpose(tf.tile(tf.expand_dims(keys, 3), [1, 1, 1, M]), perm=[0, 1, 3, 2]) # (batch_size, N, M, 2h)
+
+            s = tf.concat([values_aug, keys_aug, values_aug * keys_aug], axis=3) # (batch_size, N, M, 6h)
+            sim = tf.squeeze(tf.layers.dense(s, 1, use_bias=False), axis=3) # (batch_size, N, M)
+
+            a_mask = tf.expand_dims(values_mask, 1) # shape (batch_size, 1, M)
+            _, a_dist = masked_softmax(sim, values_mask, 1) # (batch_size, N, M)
+
+            _, b_dist = masked_softmax(tf.reduce_max(sim, 2), keys_mask, 1) # shape (batch_size, N)
+            b_dist = tf.expand_dims(b_dist, 1) # (batch_size, 1, N)
+
+            U_tilde = tf.matmul(a_dist, values) # matmul( (batch_size, N, M), (batch_size, M, 2h) ) = (batch_size, N, 2h)
+            H_tilde = tf.matmul(tf.tile(b_dist, [1, N, 1]), keys) # stack (batch_size, 1, 2h) N times to get (batch_size, N, 2h)
+
+            U_tilde_output =  tf.nn.dropout(U_tilde, self.keep_prob)
+            H_tilde_output =  tf.nn.dropout(H_tilde, self.keep_prob)
+
+            return a_dist, U_tilde_output, b_dist, H_tilde_output
 
 
 def masked_softmax(logits, mask, dim):

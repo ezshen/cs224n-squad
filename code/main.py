@@ -26,6 +26,7 @@ import logging
 import tensorflow as tf
 
 from qa_model import QAModel
+from bidaf_model import BiDAFModel
 from vocab import get_glove
 from official_eval_helper import get_json_data, generate_answers
 
@@ -133,7 +134,8 @@ def main(unused_argv):
     dev_ans_path = os.path.join(FLAGS.data_dir, "dev.span")
 
     # Initialize model
-    qa_model = QAModel(FLAGS, id2word, word2id, emb_matrix)
+    # qa_model = QAModel(FLAGS, id2word, word2id, emb_matrix)
+    qa_model = BiDAFModel(FLAGS, id2word, word2id, emb_matrix)
 
     # Some GPU settings
     config=tf.ConfigProto()

@@ -1,0 +1,12 @@
+things to try:
+
+http://web.stanford.edu/class/cs224n/reports/2762006.pdf
+- max_vote() (3%)
+    - max vote (majority voting and fallback to max prob for tie breaker)
+- use exponential moving average of parameters (LSTM weights, biases) (2-4%)
+- limiting answer length to 10 words bc 90% of answers have short answers (1%)
+
+things to evaluate:
+
+- do dataset analysis (context length, question length, answer length, where in context is answer)
+- performance of different models

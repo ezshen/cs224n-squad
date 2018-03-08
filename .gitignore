@@ -1,7 +1,10 @@
 data/
+experiments/
+
 dev-v1.1.json
 dev-v1.1.json.1
 train-v1.1.json
 
-
 .DS_Store
+
+*.pyc
