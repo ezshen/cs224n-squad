@@ -219,11 +219,14 @@ class BiAttn(object):
             M = values.get_shape()[1]
             N = keys.get_shape()[1]
 
-            values_aug = tf.transpose(tf.tile(tf.expand_dims(values, 3), [1, 1, 1, N]), perm=[0, 3, 1, 2]) # (batch_size, N, M, 2h)
-            keys_aug = tf.transpose(tf.tile(tf.expand_dims(keys, 3), [1, 1, 1, M]), perm=[0, 1, 3, 2]) # (batch_size, N, M, 2h)
+            values_aug = tf.expand_dims(values, 1)
+            keys_aug = tf.expand_dims(keys, 2)
 
-            s = tf.concat([values_aug, keys_aug, values_aug * keys_aug], axis=3) # (batch_size, N, M, 6h)
-            sim = tf.squeeze(tf.layers.dense(s, 1, use_bias=False), axis=3) # (batch_size, N, M)
+            pa = tf.layers.dense(values_aug, 1, use_bias=False, activation=None)
+            pb = tf.layers.dense(keys_aug, 1, use_bias=False, activation=None)
+            pc = tf.layers.dense(values_aug * keys_aug, 1, use_bias=False, activation=None)
+
+            sim = tf.squeeze(pa + pb + pc, axis=3) # (batch_size, N, M)
 
             a_mask = tf.expand_dims(values_mask, 1) # shape (batch_size, 1, M)
             _, a_dist = masked_softmax(sim, a_mask, 1) # (batch_size, N, M)
@@ -232,10 +235,10 @@ class BiAttn(object):
             b_dist = tf.expand_dims(b_dist, 1) # (batch_size, 1, N)
 
             U_tilde = tf.matmul(a_dist, values) # matmul( (batch_size, N, M), (batch_size, M, 2h) ) = (batch_size, N, 2h)
-            H_tilde = tf.matmul(tf.tile(b_dist, [1, N, 1]), keys) # stack (batch_size, 1, 2h) N times to get (batch_size, N, 2h)
+            H_tilde = tf.transpose(b_dist, perm=[0, 2, 1]) * keys # stack (batch_size, 1, 2h) N times to get (batch_size, N, 2h)
 
-            U_tilde_output =  tf.nn.dropout(U_tilde, self.keep_prob)
-            H_tilde_output =  tf.nn.dropout(H_tilde, self.keep_prob)
+            U_tilde_output = tf.nn.dropout(U_tilde, self.keep_prob)
+            H_tilde_output = tf.nn.dropout(H_tilde, self.keep_prob)
 
             return a_dist, U_tilde_output, b_dist, H_tilde_output
 
