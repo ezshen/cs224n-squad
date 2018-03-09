@@ -135,13 +135,11 @@ class BiDAFModel(QAModel):
         # Use softmax layer to compute probability distribution for start location
         # Note this produces self.logits_start and self.probdist_start, both of which have shape (batch_size, context_len)
         with vs.variable_scope("StartDist"):
-            p1 = tf.layers.dense(tf.concat([blended_reps, blended_reps_1], axis=2), 1, use_bias=False) # (batch_size, N, 1)
             softmax_layer_start = SimpleSoftmaxLayer()
-            self.logits_start, self.probdist_start = softmax_layer_start.build_graph(p1, self.context_mask)
+            self.logits_start, self.probdist_start = softmax_layer_start.build_graph(tf.concat([blended_reps, blended_reps_1], axis=2), self.context_mask)
 
         # Use softmax layer to compute probability distribution for end location
         # Note this produces self.logits_end and self.probdist_end, both of which have shape (batch_size, context_len)
         with vs.variable_scope("EndDist"):
-            p2 = tf.layers.dense(tf.concat([blended_reps, blended_reps_2], axis=2), 1, use_bias=False) # (batch_size, N, 1)
             softmax_layer_end = SimpleSoftmaxLayer()
-            self.logits_end, self.probdist_end = softmax_layer_end.build_graph(p2, self.context_mask)
+            self.logits_end, self.probdist_end = softmax_layer_end.build_graph(tf.concat([blended_reps, blended_reps_2], axis=2), self.context_mask)
