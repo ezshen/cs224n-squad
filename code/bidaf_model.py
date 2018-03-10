@@ -117,15 +117,15 @@ class BiDAFModel(QAModel):
         # Concat attn_output to context_hiddens to get blended_reps
         blended_reps = tf.concat([context_hiddens, U_tilde, context_hiddens * U_tilde, context_hiddens * H_tilde], axis=2) # (batch_size, context_len, hidden_size*8)
 
-        with vs.variable_scope("M1_init"):
-            # Bidirectional GRU M1
-            modeling_layer = RNNEncoder(self.FLAGS.hidden_size, self.keep_prob)
-            blended_reps_1_init = modeling_layer.build_graph(blended_reps, self.context_mask) # (batch_size, N, 2h)
+        # with vs.variable_scope("M1_init"):
+        #     # Bidirectional GRU M1
+        #     modeling_layer = RNNEncoder(self.FLAGS.hidden_size, self.keep_prob)
+        #     blended_reps_1_init = modeling_layer.build_graph(blended_reps, self.context_mask) # (batch_size, N, 2h)
 
         with vs.variable_scope("M1"):
             # Bidrectional GRU M2
             modeling_layer = RNNEncoder(self.FLAGS.hidden_size, self.keep_prob)
-            blended_reps_1 = modeling_layer.build_graph(blended_reps_1_init, self.context_mask) # (batch_size, N, 2h)
+            blended_reps_1 = modeling_layer.build_graph(blended_reps, self.context_mask) # (batch_size, N, 2h)
 
         with vs.variable_scope("M2"):
             # Bidrectional GRU M2
