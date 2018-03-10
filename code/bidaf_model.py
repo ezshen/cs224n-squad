@@ -112,7 +112,7 @@ class BiDAFModel(QAModel):
 
         # Use context hidden states to attend to question hidden states
         attn_layer = BiAttn(self.keep_prob, self.FLAGS.hidden_size*2, self.FLAGS.hidden_size*2)
-        _, U_tilde, _, H_tilde = attn_layer.build_graph(question_hiddens, self.qn_mask, context_hiddens, self.context_mask) # shapes are each (batch_size, context_len, hidden_size*2)
+        _, U_tilde, _, H_tilde = attn_layer.build_graph(question_hiddens, self.qn_mask, context_hiddens, self.context_mask) # shapes are U_tilde: (batch_size, context_len, 2h), H_tilde: (batch_size, context_len, 1)
 
         # Concat attn_output to context_hiddens to get blended_reps
         blended_reps = tf.concat([context_hiddens, U_tilde, context_hiddens * U_tilde, context_hiddens * H_tilde], axis=2) # (batch_size, context_len, hidden_size*8)
