@@ -222,6 +222,65 @@ class BiAttn(object):
             return a_dist, U_tilde_output, b_dist, H_tilde_output
 
 
+class CoAttn(object):
+    """Module for bidirectional attention.
+    """
+
+    def __init__(self, keep_prob, key_vec_size, value_vec_size):
+        self.keep_prob = keep_prob
+        self.key_vec_size = key_vec_size
+        self.value_vec_size = value_vec_size
+
+    def build_graph(self, values, values_mask, keys, keys_mask):
+        """
+        Keys attend to values.
+        For each key, return an attention distribution and an attention output vector.
+
+        Inputs:
+          values: Tensor shape (batch_size, num_values, value_vec_size).
+          values_mask: Tensor shape (batch_size, num_values).
+            1s where there's real input, 0s where there's padding
+          keys: Tensor shape (batch_size, num_keys, key_vec_size)
+          keys_mask: Tensor shape (batch_size, num_keys).
+            1s where there's real input, 0s where there's padding
+
+        Outputs:
+
+        """
+        with vs.variable_scope("CoAttn"):
+            values_ = tf.nn.tanh(tf.layers.dense(values, values.get_shape()[2], use_bias=True)) # (batch_size, M, 2h)
+
+            # with vs.variable_scope("Sentinels")
+            #     values_sent = tf.get_variable("values_sent", shape=())
+            #     keys_sent =tf.get_variable("keys_sent", shape=())
+
+            #     tf.concat([values_, values_sent], axis=2)
+
+            values_aug = tf.expand_dims(values_, 1) # (batch_size, 1, M, 2h)
+            keys_aug = tf.expand_dims(keys, 2) # (batch_size, M, 1, 2h)
+
+            pa = tf.layers.dense(values_aug, 1, use_bias=False)
+            pb = tf.layers.dense(keys_aug, 1, use_bias=False)
+            pc = tf.layers.dense(values_aug * keys_aug, 1, use_bias=False)
+
+            sim = tf.squeeze(pa + pb + pc, axis=3) # (batch_size, N, M)
+
+            a_mask = tf.expand_dims(values_mask, 1) # shape (batch_size, 1, M)
+            _, a_dist = masked_softmax(sim, a_mask, 1) # (batch_size, N, M)
+            A = tf.matmul(a_dist, values_) # matmul( (batch_size, N, M), (batch_size, M, 2h) ) = (batch_size, M, 2h)
+
+            b_mask = tf.expand_dims(keys_mask, 1) # shape (batch_size, 1, M)
+            _, b_dist = masked_softmax(tf.transpose(sim, perm=[0, 2, 1]), b_mask, 2) # (batch_size, N, M)
+            B = tf.matmul(b_dist, keys) # matmul( (batch_size, N, M), (batch_size, M, 2h) ) = (batch_size, M, 2h)
+
+            F = tf.concat([tf.matmul(a_dist, B), A], axis=2) # (batch_size, N, 4h)
+
+            with vs.variable_scope("Coattn Encoding"):
+                # Bidirectional GRU for coattention encoding
+                modeling_layer = RNNEncoder(self.FLAGS.hidden_size, self.keep_prob)
+                output = modeling_layer.build_graph(F, self.context_mask) # (batch_size, N, 2h)
+
+
 def masked_softmax(logits, mask, dim):
     """
     Takes masked softmax over given dimension of logits.
