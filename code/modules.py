@@ -221,7 +221,6 @@ class BiAttn(object):
 
             return a_dist, U_tilde_output, b_dist, H_tilde_output
 
-
 class CoAttn(object):
     """Module for bidirectional attention.
     """
@@ -248,13 +247,9 @@ class CoAttn(object):
 
         """
         with vs.variable_scope("CoAttn"):
-            values_ = tf.nn.tanh(tf.layers.dense(values, values.get_shape()[2], use_bias=True)) # (batch_size, M, 2h)
+            hidden_size = self.value_vec_size / 2
 
-            # with vs.variable_scope("Sentinels")
-            #     values_sent = tf.get_variable("values_sent", shape=())
-            #     keys_sent =tf.get_variable("keys_sent", shape=())
-
-            #     tf.concat([values_, values_sent], axis=2)
+            values_ = tf.nn.tanh(tf.layers.dense(values, self.value_vec_size, use_bias=True)) # (batch_size, M, 2h)
 
             values_aug = tf.expand_dims(values_, 1) # (batch_size, 1, M, 2h)
             keys_aug = tf.expand_dims(keys, 2) # (batch_size, M, 1, 2h)
@@ -275,10 +270,12 @@ class CoAttn(object):
 
             F = tf.concat([tf.matmul(a_dist, B), A], axis=2) # (batch_size, N, 4h)
 
-            with vs.variable_scope("Coattn Encoding"):
+            with vs.variable_scope("coattn_encoding"):
                 # Bidirectional GRU for coattention encoding
-                modeling_layer = RNNEncoder(self.FLAGS.hidden_size, self.keep_prob)
-                output = modeling_layer.build_graph(F, self.context_mask) # (batch_size, N, 2h)
+                modeling_layer = RNNEncoder(hidden_size, self.keep_prob)
+                output = modeling_layer.build_graph(F, keys_mask) # (batch_size, N, 2h)
+
+            return a_dist, b_dist, output
 
 
 def masked_softmax(logits, mask, dim):
