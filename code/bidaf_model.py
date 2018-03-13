@@ -30,7 +30,7 @@ from tensorflow.python.ops import embedding_ops
 from evaluate import exact_match_score, f1_score
 from data_batcher import get_batch_generator
 from pretty_print import print_example
-from modules import RNNEncoder, SimpleSoftmaxLayer, BiAttn
+from modules import RNNEncoder, SimpleSoftmaxLayer, BiAttn, SelfAttn
 from qa_model import QAModel
 
 logging.basicConfig(level=logging.INFO)
