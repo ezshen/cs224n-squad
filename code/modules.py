@@ -19,6 +19,52 @@ from tensorflow.python.ops.rnn_cell import DropoutWrapper
 from tensorflow.python.ops import variable_scope as vs
 from tensorflow.python.ops import rnn_cell
 
+class OneWayRNNEncoder(object):
+    """
+    General-purpose module to encode a sequence using a RNN.
+    It feeds the input through a RNN and returns all the hidden states.
+
+    Note: In lecture 8, we talked about how you might use a RNN as an "encoder"
+    to get a single, fixed size vector representation of a sequence
+    (e.g. by taking element-wise max of hidden states).
+    Here, we're using the RNN as an "encoder" but we're not taking max;
+    we're just returning all the hidden states. The terminology "encoder"
+    still applies because we're getting a different "encoding" of each
+    position in the sequence, and we'll use the encodings downstream in the model.
+
+    This code uses a bidirectional GRU, but you could experiment with other types of RNN.
+    """
+
+    def __init__(self, hidden_size, keep_prob):
+        """
+        Inputs:
+          hidden_size: int. Hidden size of the RNN
+          keep_prob: Tensor containing a single scalar that is the keep probability (for dropout)
+        """
+        self.hidden_size = hidden_size
+        self.keep_prob = keep_prob
+        self.rnn_cell = rnn_cell.LSTMCell(self.hidden_size)
+        self.rnn_cell = DropoutWrapper(self.rnn_cell, input_keep_prob=self.keep_prob)
+
+    def build_graph(self, inputs, masks):
+        """
+        Inputs:
+          inputs: Tensor shape (batch_size, seq_len, input_size)
+          masks: Tensor shape (batch_size, seq_len).
+            Has 1s where there is real input, 0s where there's padding.
+            This is used to make sure tf.nn.bidirectional_dynamic_rnn doesn't iterate through masked steps.
+
+        Returns:
+          out: Tensor shape (batch_size, seq_len, hidden_size*2).
+            This is all hidden states (fw and bw hidden states are concatenated).
+        """
+        with vs.variable_scope("RNNEncoder"):
+            input_lens = tf.reduce_sum(masks, reduction_indices=1) # shape (batch_size)
+            # Each is shape (batch_size, seq_len, hidden_size).
+            out, _ = tf.nn.dynamic_rnn(self.rnn_cell, inputs, input_lens, dtype=tf.float32)
+            # Apply dropout
+            out = tf.nn.dropout(out, self.keep_prob)
+            return out
 
 class RNNEncoder(object):
     """
@@ -44,9 +90,9 @@ class RNNEncoder(object):
         """
         self.hidden_size = hidden_size
         self.keep_prob = keep_prob
-        self.rnn_cell_fw = rnn_cell.GRUCell(self.hidden_size)
+        self.rnn_cell_fw = rnn_cell.LSTMCell(self.hidden_size)
         self.rnn_cell_fw = DropoutWrapper(self.rnn_cell_fw, input_keep_prob=self.keep_prob)
-        self.rnn_cell_bw = rnn_cell.GRUCell(self.hidden_size)
+        self.rnn_cell_bw = rnn_cell.LSTMCell(self.hidden_size)
         self.rnn_cell_bw = DropoutWrapper(self.rnn_cell_bw, input_keep_prob=self.keep_prob)
 
     def build_graph(self, inputs, masks):
@@ -220,6 +266,65 @@ class BiAttn(object):
             H_tilde_output = tf.nn.dropout(H_tilde, self.keep_prob)
 
             return a_dist, U_tilde_output, b_dist, H_tilde_output
+
+class SelfAttn(object):
+    """Module for self attention.
+    """
+
+    def __init__(self, keep_prob, key_vec_size, value_vec_size):
+        self.keep_prob = keep_prob
+        self.key_vec_size = key_vec_size
+        self.value_vec_size = value_vec_size
+
+    def build_graph(self, values, values_mask, keys, keys_mask):
+        """
+        Keys attend to values.
+        For each key, return an attention distribution and an attention output vector.
+
+        Inputs:
+          values: Tensor shape (batch_size, num_values, value_vec_size).
+          values_mask: Tensor shape (batch_size, num_values).
+            1s where there's real input, 0s where there's padding
+          keys: Tensor shape (batch_size, num_keys, key_vec_size)
+          keys_mask: Tensor shape (batch_size, num_keys).
+            1s where there's real input, 0s where there's padding
+
+        Outputs:
+
+        """
+        with vs.variable_scope("Self-Attn"):
+            values_aug = tf.expand_dims(values, 1)
+            keys_aug = tf.expand_dims(keys, 2)
+
+            pa = tf.layers.dense(values_aug, 1, use_bias=False)
+            pb = tf.layers.dense(keys_aug, 1, use_bias=False)
+            pc = tf.layers.dense(values_aug * keys_aug, 1, use_bias=False)
+
+            sim = tf.squeeze(pa + pb + pc, axis=3) # (batch_size, N, M)
+
+            a_mask = tf.expand_dims(values_mask, 1) # shape (batch_size, 1, M)
+            _, a_dist = masked_softmax(sim, a_mask, 2) # (batch_size, N, M)
+            U_tilde = tf.matmul(a_dist, values) # matmul( (batch_size, N, M), (batch_size, M, 2h) ) = (batch_size, N, 2h)
+ 
+            oneway_encoder = OneWayRNNEncoder(2 * self.FLAGS.hidden_size, self.keep_prob)
+            V = oneway_encoder.build_graph(tf.concat([keys, U_tilde], axis=2), self.context_mask)
+
+            V_aug_col = tf.expand_dims(values, 1)
+            V_aug_row = tf.expand_dims(values, 2)
+
+            pa_prime = tf.layers.dense(V_aug_col, 1, use_bias=False)
+            pb_prime = tf.layers.dense(V_aug_row, 1, use_bias=False)
+            pc_prime = tf.layers.dense(V_aug_col * V_aug_row, 1, use_bias=False)
+
+            sim_prime = tf.squeeze(pa + pb + pc, axis=3) # (batch_size, N, N)
+
+            alpha_mask = tf.expand_dims(keys_mask, 1) # shape (batch_size, 1, N)
+            _, alpha_dist = masked_softmax(sim_prime, alpha_mask, 2) # (batch_size, N, N)
+            F = tf.matmul(alpha_dist, V) # matmul( (batch_size, N, N), (batch_size, N, 2h) ) = (batch_size, N, 2h)
+            twoway_encoder = RNNEncoder(self.FLAGS.hidden_size, self.keep_prob)
+            F_prime = twoway_encoder.build_graph(tf.concat([V, F], axis = 2) self.context_mask)
+
+            return a_dist, alpha_dist, F_prime
 
 
 def masked_softmax(logits, mask, dim):
