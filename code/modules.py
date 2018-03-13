@@ -293,6 +293,7 @@ class SelfAttn(object):
 
         """
         with vs.variable_scope("Self-Attn"):
+            hidden_size = values.shape[2]
             values_aug = tf.expand_dims(values, 1)
             keys_aug = tf.expand_dims(keys, 2)
 
@@ -306,7 +307,7 @@ class SelfAttn(object):
             _, a_dist = masked_softmax(sim, a_mask, 2) # (batch_size, N, M)
             U_tilde = tf.matmul(a_dist, values) # matmul( (batch_size, N, M), (batch_size, M, 2h) ) = (batch_size, N, 2h)
 
-            oneway_encoder = OneWayRNNEncoder(2 * self.FLAGS.hidden_size, self.keep_prob)
+            oneway_encoder = OneWayRNNEncoder(2 * hidden_size, self.keep_prob)
             V = oneway_encoder.build_graph(tf.concat([keys, U_tilde], axis=2), self.context_mask) # (batch_size, N, 2h)
 
             V_aug_col = tf.expand_dims(V, 1)
@@ -321,7 +322,7 @@ class SelfAttn(object):
             alpha_mask = tf.expand_dims(keys_mask, 1) # shape (batch_size, 1, N)
             _, alpha_dist = masked_softmax(sim_prime, alpha_mask, 2) # (batch_size, N, N)
             F = tf.matmul(alpha_dist, V) # matmul( (batch_size, N, N), (batch_size, N, 2h) ) = (batch_size, N, 2h)
-            twoway_encoder = RNNEncoder(self.FLAGS.hidden_size, self.keep_prob)
+            twoway_encoder = RNNEncoder(hidden_size, self.keep_prob)
             F_prime = twoway_encoder.build_graph(tf.concat([V, F], axis = 2), self.context_mask)
 
             return a_dist, alpha_dist, F_prime
