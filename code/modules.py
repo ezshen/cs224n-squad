@@ -305,7 +305,7 @@ class SelfAttn(object):
             a_mask = tf.expand_dims(values_mask, 1) # shape (batch_size, 1, M)
             _, a_dist = masked_softmax(sim, a_mask, 2) # (batch_size, N, M)
             U_tilde = tf.matmul(a_dist, values) # matmul( (batch_size, N, M), (batch_size, M, 2h) ) = (batch_size, N, 2h)
- 
+
             oneway_encoder = OneWayRNNEncoder(2 * self.FLAGS.hidden_size, self.keep_prob)
             V = oneway_encoder.build_graph(tf.concat([keys, U_tilde], axis=2), self.context_mask) # (batch_size, N, 2h)
 
