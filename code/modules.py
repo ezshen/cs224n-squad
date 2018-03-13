@@ -322,7 +322,7 @@ class SelfAttn(object):
             _, alpha_dist = masked_softmax(sim_prime, alpha_mask, 2) # (batch_size, N, N)
             F = tf.matmul(alpha_dist, V) # matmul( (batch_size, N, N), (batch_size, N, 2h) ) = (batch_size, N, 2h)
             twoway_encoder = RNNEncoder(self.FLAGS.hidden_size, self.keep_prob)
-            F_prime = twoway_encoder.build_graph(tf.concat([V, F], axis = 2) self.context_mask)
+            F_prime = twoway_encoder.build_graph(tf.concat([V, F], axis = 2), self.context_mask)
 
             return a_dist, alpha_dist, F_prime
 
