@@ -293,7 +293,7 @@ class SelfAttn(object):
 
         """
         with vs.variable_scope("Self-Attn"):
-            hidden_size = values.get_shape()[2] / 2
+            hidden_size = values.get_shape()[2].value / 2
             values_aug = tf.expand_dims(values, 1)
             keys_aug = tf.expand_dims(keys, 2)
 
