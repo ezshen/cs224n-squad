@@ -58,7 +58,7 @@ class OneWayRNNEncoder(object):
           out: Tensor shape (batch_size, seq_len, hidden_size*2).
             This is all hidden states (fw and bw hidden states are concatenated).
         """
-        with vs.variable_scope("RNNEncoder"):
+        with vs.variable_scope("OneWayRNNEncoder"):
             input_lens = tf.reduce_sum(masks, reduction_indices=1) # shape (batch_size)
             # Each is shape (batch_size, seq_len, hidden_size).
             out, _ = tf.nn.dynamic_rnn(self.rnn_cell, inputs, input_lens, dtype=tf.float32)
@@ -307,16 +307,16 @@ class SelfAttn(object):
             U_tilde = tf.matmul(a_dist, values) # matmul( (batch_size, N, M), (batch_size, M, 2h) ) = (batch_size, N, 2h)
  
             oneway_encoder = OneWayRNNEncoder(2 * self.FLAGS.hidden_size, self.keep_prob)
-            V = oneway_encoder.build_graph(tf.concat([keys, U_tilde], axis=2), self.context_mask)
+            V = oneway_encoder.build_graph(tf.concat([keys, U_tilde], axis=2), self.context_mask) # (batch_size, N, 2h)
 
-            V_aug_col = tf.expand_dims(values, 1)
-            V_aug_row = tf.expand_dims(values, 2)
+            V_aug_col = tf.expand_dims(V, 1)
+            V_aug_row = tf.expand_dims(V, 2)
 
             pa_prime = tf.layers.dense(V_aug_col, 1, use_bias=False)
             pb_prime = tf.layers.dense(V_aug_row, 1, use_bias=False)
             pc_prime = tf.layers.dense(V_aug_col * V_aug_row, 1, use_bias=False)
 
-            sim_prime = tf.squeeze(pa + pb + pc, axis=3) # (batch_size, N, N)
+            sim_prime = tf.squeeze(pa_prime + pb_prime + pc_prime, axis=3) # (batch_size, N, N)
 
             alpha_mask = tf.expand_dims(keys_mask, 1) # shape (batch_size, 1, N)
             _, alpha_dist = masked_softmax(sim_prime, alpha_mask, 2) # (batch_size, N, N)
