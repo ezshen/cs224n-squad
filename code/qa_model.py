@@ -294,6 +294,8 @@ class QAModel(object):
             The most likely start and end positions for each example in the batch.
         """
         # Get start_dist and end_dist, both shape (batch_size, context_len)
+        start_dist, end_dist = self.get_prob_dists(session, batch)
+
         col = np.zeros(self.FLAGS.context_len)
         col[0] = 1
         row = np.zeros(self.FLAGS.context_len)
