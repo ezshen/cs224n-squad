@@ -301,14 +301,13 @@ class QAModel(object):
         for i in range(self.FLAGS.answer_len):
             row[i] = 1
         M = np.expand_dims(scipy.linalg.toeplitz(c = col, r = row), 0)
-        marker = tf.constant(M)
-        modified_start = tf.expand_dims(start_dist, 1)
-        modifiend_end = tf.expand_dims(send_dist, 1)
+        modified_start = np.expand_dims(start_dist, 2)
+        modifiend_end = np.expand_dims(end_dist, 1)
         prob = M * modified_start * modifiend_end
-        prob = tf.reshape(prob, (shape[0].value, -1))
-        prob = tf.argmax(prob, axis = 1, output_type = tf.int32)
-        start_pos = tf.floor(tf.divide(prob, self.FLAGS.context_len))
-        end_pos = tf.mod(prob, self.FLAGS.context_len)
+        prob = prob.reshape((prob.shape[0], -1))
+        prob = np.argmax(prob, axis = 1)
+        start_pos = np.ndarray.astype(np.floor(np.divide(prob, self.FLAGS.context_len)), np.int32)
+        end_pos = np.ndarray.astype(np.mod(prob, self.FLAGS.context_len), np.int32)
     
         return start_pos, end_pos
 
