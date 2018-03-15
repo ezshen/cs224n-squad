@@ -1,5 +1,6 @@
 data/
 experiments/
+predictions.json
 
 dev-v1.1.json
 dev-v1.1.json.1
