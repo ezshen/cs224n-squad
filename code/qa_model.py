@@ -22,6 +22,8 @@ import logging
 import os
 import sys
 
+from scipy import linalg
+
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.ops import variable_scope as vs
@@ -284,23 +286,31 @@ class QAModel(object):
     def get_start_end_pos(self, session, batch):
         """
         Run forward-pass only; get the most likely answer span.
-
         Inputs:
           session: TensorFlow session
           batch: Batch object
-
         Returns:
           start_pos, end_pos: both numpy arrays shape (batch_size).
             The most likely start and end positions for each example in the batch.
         """
         # Get start_dist and end_dist, both shape (batch_size, context_len)
-        start_dist, end_dist = self.get_prob_dists(session, batch)
-
-        # Take argmax to get start_pos and end_post, both shape (batch_size)
-        start_pos = np.argmax(start_dist, axis=1)
-        end_pos = np.argmax(end_dist, axis=1)
-
+        col = np.zeros(self.FLAGS.context_len)
+        col[0] = 1
+        row = np.zeros(self.FLAGS.context_len)
+        for i in range(self.FLAGS.answer_len):
+            row[i] = 1
+        M = np.expand_dims(scipy.linalg.toeplitz(c = col, r = row), 0)
+        marker = tf.constant(M)
+        modified_start = tf.expand_dims(start_dist, 1)
+        modifiend_end = tf.expand_dims(send_dist, 1)
+        prob = M * modified_start * modifiend_end
+        prob = tf.reshape(prob, (shape[0].value, -1))
+        prob = tf.argmax(prob, axis = 1, output_type = tf.int32)
+        start_pos = tf.floor(tf.divide(prob, self.FLAGS.context_len))
+        end_pos = tf.mod(prob, self.FLAGS.context_len)
+    
         return start_pos, end_pos
+
 
 
     def get_dev_loss(self, session, dev_context_path, dev_qn_path, dev_ans_path):
