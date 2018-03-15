@@ -27,6 +27,7 @@ import tensorflow as tf
 
 from qa_model import QAModel
 from bidaf_model import BiDAFModel
+from selfattn_model import SelfAttnModel
 from vocab import get_glove
 from official_eval_helper import get_json_data, generate_answers
 
