@@ -270,7 +270,7 @@ class BiAttn(object):
 class SelfAttn(object):
     """Module for self attention.
     """
-    
+
     def __init__(self, keep_prob, key_vec_size, value_vec_size):
         self.keep_prob = keep_prob
         self.key_vec_size = key_vec_size
@@ -295,7 +295,7 @@ class SelfAttn(object):
             hidden_size = values.get_shape()[2].value / 2
             values_aug = tf.expand_dims(values, 1)
             keys_aug = tf.expand_dims(keys, 2)
-            
+
             pa = tf.layers.dense(values_aug, 1, use_bias=False)
             pb = tf.layers.dense(keys_aug, 1, use_bias=False)
             pc = tf.layers.dense(values_aug * keys_aug, 1, use_bias=False)
@@ -303,7 +303,7 @@ class SelfAttn(object):
             sim = tf.squeeze(pa + pb + pc, axis=3) # (batch_size, N, M)
 
             a_mask = tf.expand_dims(values_mask, 1) # shape (batch_size, 1, M)
-            
+
             _, a_dist = masked_softmax(sim, a_mask, 2) # (batch_size, N, M)
             U_tilde = tf.matmul(a_dist, values) # matmul( (batch_size, N, M), (batch_size, M, 2h) ) = (batch_size, N, 2h)
 
@@ -326,7 +326,7 @@ class SelfAttn(object):
             F_prime = twoway_encoder.build_graph(tf.concat([V, F], axis = 2), keys_mask)
 
             return a_dist, alpha_dist, F_prime
-            
+
 class CoAttn(object):
     """Module for bidirectional attention.
     """
@@ -383,6 +383,18 @@ class CoAttn(object):
                 output = modeling_layer.build_graph(F, keys_mask) # (batch_size, N, 2h)
 
             return a_dist, b_dist, output
+
+def conv1d(in_, filter_size, kernel_size, padding, keep_prob, scope):
+    with tf.variable_scope(scope):
+        filter_ = tf.get_variable("filter", shape=[1, kernel_size, in_.shape[3], filter_size], dtype='float')
+        bias = tf.get_variable("bias", shape=[filter_size], dtype='float')
+
+    strides = [1, 1, 1, 1]
+    in_ = tf.nn.dropout(in_, keep_prob) # (batch_size, context_len or qn_len, max_word_size, char_embed_size)
+
+    output = tf.nn.conv2d(in_, filter_, strides, padding) + bias  # [batch_size, context_len or qn_len, max_word_size, filter_size]
+    output = tf.reduce_max(output, 2)  # [batch_size, context_len or qn_len, filter_size]
+    return output
 
 
 def masked_softmax(logits, mask, dim):
