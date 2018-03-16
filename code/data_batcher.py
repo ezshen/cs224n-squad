@@ -94,7 +94,6 @@ def char_padded(token_char_batch, token_pad, char_pad):
     token_char_batch = map(lambda token_list: token_list + [[PAD_ID]] * (token_pad - len(token_list)), token_char_batch)
     for char_batch in token_char_batch:
         output.append(map(lambda char_list: char_list + [PAD_ID] * (char_pad - len(char_list)), char_batch))
-    print len(output), len(output[0]), len(output[0][0])
     return output
 
 def padded(token_batch, batch_pad=0):
@@ -246,8 +245,6 @@ def get_batch_generator(char2id, word2id, context_path, qn_path, ans_path, batch
         # Make char_context_ids
         char_context_ids = np.array(char_padded(char_context_ids, context_len, max_word_size))
         char_qn_ids = np.array(char_padded(char_qn_ids, question_len, max_word_size))
-
-        print char_context_ids.shape
 
         # Make ans_span into a np array
         ans_span = np.array(ans_span) # shape (batch_size, 2)
