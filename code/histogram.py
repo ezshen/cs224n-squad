@@ -43,8 +43,8 @@ when_c, when_q, when_a = [], [], []
 where_c, where_q, where_a = [], [], []
 why_c, why_q, why_a = [], [], []
 how_c, how_q, how_a = [], [], []
+which_c, which_q, which_a = [], [], []
 other_c, other_q, other_a = [], [], []
-
 
 for i in range(tot_examples):
 	categorized = False
@@ -86,6 +86,12 @@ for i in range(tot_examples):
 			how_a.append(answer[i])
 			categorized = True
 			break
+		elif curr_q[j] == 'which':
+			which_c.append(context[i])
+			which_q.append(curr_q)
+			which_a.append(answer[i])
+			categorized = True
+			break
 	if not categorized:
 		other_c.append(context[i])
 		other_q.append(curr_q)
@@ -98,6 +104,7 @@ when_answer_len = [len(x) for x in when_a]
 where_answer_len = [len(x) for x in where_a]
 why_answer_len = [len(x) for x in why_a]
 how_answer_len = [len(x) for x in how_a]
+which_answer_len = [len(x) for x in which_a]
 other_answer_len = [len(x) for x in other_a]
 
 print "percentage of who questions:" + str(len(who_q)/float(tot_examples))
@@ -106,6 +113,7 @@ print "percentage of when questions:" + str(len(when_q)/float(tot_examples))
 print "percentage of where questions:" + str(len(where_q)/float(tot_examples))
 print "percentage of why questions:" + str(len(why_q)/float(tot_examples))
 print "percentage of how questions:" + str(len(how_q)/float(tot_examples))
+print "percentage of which questions:" + str(len(which_q)/float(tot_examples))
 print "percentage of other questions:" + str(len(other_q)/float(tot_examples))
 
 def plot_lens(a, filename):
@@ -120,6 +128,7 @@ plot_lens(when_answer_len, 'when_answer_lens.png')
 plot_lens(where_answer_len, 'where_answer_lens.png')
 plot_lens(why_answer_len, 'why_answer_lens.png')
 plot_lens(how_answer_len, 'how_answer_lens.png')
+plot_lens(which_answer_len, 'which_answer_lens.png')
 plot_lens(other_answer_len, 'other_answer_lens.png')
 #plot_lens(answer_lens, 'answer_lens.png')
 #plot_lens(context_lens, 'context_lens.png')
