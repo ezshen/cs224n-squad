@@ -106,10 +106,11 @@ class QAModel(object):
         self.keep_prob = tf.placeholder_with_default(1.0, shape=())
 
 
-    def add_char_embedding_layer(self, char_emb_matrix):
+    def add_char_embedding_layer(self, char_embed_matrix):
         with vs.variable_scope("char_embed"):
             # with vs.variable_scope("char_embed_var"):
             #     char_emb_matrix = tf.get_variable("char_emb_matrix", shape=[config.char_vocab_size, config.char_embed_size], dtype='float')
+            char_emb_matrix = tf.constant(char_embed_matrix, dtype=tf.float32, name="emb_matrix")
 
             with vs.variable_scope("char"):
                 char_context_lookup = tf.nn.embedding_lookup(char_emb_matrix, self.char_context_ids) # (batch_size, context_len, max_word_size, char_embed_size)
