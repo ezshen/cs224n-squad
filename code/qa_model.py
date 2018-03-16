@@ -96,9 +96,13 @@ class QAModel(object):
         self.context_ids = tf.placeholder(tf.int32, shape=[None, self.FLAGS.context_len])
         self.char_context_ids = tf.placeholder(tf.int32, shape=[None, self.FLAGS.context_len, self.FLAGS.max_word_size])
         self.context_mask = tf.placeholder(tf.int32, shape=[None, self.FLAGS.context_len])
+        self.char_context_mask = tf.placeholder(tf.int32, shape=[None, self.FLAGS.context_len, self.FLAGS.max_word_size])
+
         self.qn_ids = tf.placeholder(tf.int32, shape=[None, self.FLAGS.question_len])
         self.char_qn_ids = tf.placeholder(tf.int32, shape=[None, self.FLAGS.question_len, self.FLAGS.max_word_size])
         self.qn_mask = tf.placeholder(tf.int32, shape=[None, self.FLAGS.question_len])
+        self.char_qn_mask = tf.placeholder(tf.int32, shape=[None, self.FLAGS.question_len, self.FLAGS.max_word_size])
+
         self.ans_span = tf.placeholder(tf.int32, shape=[None, 2])
 
         # Add a placeholder to feed in the keep probability (for dropout).
@@ -108,17 +112,22 @@ class QAModel(object):
 
     def add_char_embedding_layer(self, char_embed_matrix):
         with vs.variable_scope("char_embed"):
-            with vs.variable_scope("char_embed_var"):
-                char_emb_matrix = tf.get_variable(initializer=char_embed_matrix, dtype=tf.float32, name="emb_matrix")
+            char_emb_matrix = tf.get_variable(initializer=char_embed_matrix, dtype=tf.float32, name="emb_matrix")
 
-            with vs.variable_scope("char"):
-                char_context_lookup = tf.nn.embedding_lookup(char_emb_matrix, self.char_context_ids) # (batch_size, context_len, max_word_size, char_embed_size)
-                char_qn_lookup = tf.nn.embedding_lookup(char_emb_matrix, self.char_qn_ids) # (batch_size, question_len, max_word_size, char_embed_size)
+            char_context_lookup = tf.nn.embedding_lookup(char_emb_matrix, self.char_context_ids) # (batch_size, context_len, max_word_size, char_embed_size)
+            char_qn_lookup = tf.nn.embedding_lookup(char_emb_matrix, self.char_qn_ids) # (batch_size, question_len, max_word_size, char_embed_size)
 
-                with vs.variable_scope("conv"):
-                    self.char_context_embs = conv1d(char_context_lookup, self.FLAGS.filter_size, self.FLAGS.kernel_size, "VALID", self.keep_prob, "conv1d") # [batch_size, context_len, filter_size]
-                    tf.get_variable_scope().reuse_variables()
-                    self.char_qn_embs = conv1d(char_qn_lookup, self.FLAGS.filter_size, self.FLAGS.kernel_size, "VALID", self.keep_prob, "conv1d") # [batch_size, qn_len, filter_size]
+            conv_char_context = tf.nn.conv2d(char_context_lookup, self.FLAGS.filter_size, [1, self.FLAGS.kernel_size], padding="SAME") # [batch_size, context_len, max_word_size, filter_size]
+            conv_char_qn = tf.nn.conv2d(char_qn_lookup, self.FLAGS.filter_size, [1, self.FLAGS.kernel_size], padding="SAME") # [batch_size, context_len, max_word_size, filter_size]
+
+            conv_char_context = tf.nn.relu(conv_char_context)
+            conv_qn_context = tf.nn.relu(conv_qn_context)
+
+            conv_char_context = tf.nn.conv2d(char_context_lookup, self.FLAGS.filter_size, [1, self.FLAGS.kernel_size], padding="SAME") # [batch_size, context_len, max_word_size, filter_size]
+            conv_char_qn = tf.nn.conv2d(char_qn_lookup, self.FLAGS.filter_size, [1, self.FLAGS.kernel_size], padding="SAME") # [batch_size, context_len, max_word_size, filter_size]
+
+            self.char_context_embs = tf.reduce_max(tf.add(conv_char_context, (1 - tf.cast(self.FLAGS.char_context_mask, 'float')) * (-1e30)), axis=2)
+            self.char_qn_embs = tf.reduce_max(tf.add(conv_char_qn, (1 - tf.cast(self.FLAGS.char_qn_mask, 'float')) * (-1e30)), axis=2)
 
     def add_embedding_layer(self, emb_matrix):
         """

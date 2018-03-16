@@ -384,18 +384,6 @@ class CoAttn(object):
 
             return a_dist, b_dist, output
 
-def conv1d(in_, filter_size, kernel_size, padding, keep_prob, scope):
-    with tf.variable_scope(scope):
-        filter_ = tf.get_variable("filter", shape=[1, kernel_size, in_.shape[3], filter_size], dtype='float')
-        bias = tf.get_variable("bias", shape=[filter_size], dtype='float')
-
-    strides = [1, 1, 1, 1]
-    in_ = tf.nn.dropout(in_, keep_prob) # (batch_size, context_len or qn_len, max_word_size, char_embed_size)
-
-    output = tf.nn.conv2d(in_, filter_, strides, padding) + bias  # [batch_size, context_len or qn_len, max_word_size, filter_size]
-    output = tf.reduce_max(output, 2)  # [batch_size, context_len or qn_len, filter_size]
-    return output
-
 
 def masked_softmax(logits, mask, dim):
     """
