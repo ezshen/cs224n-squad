@@ -30,7 +30,7 @@ from vocab import PAD_ID, UNK_ID
 class Batch(object):
     """A class to hold the information needed for a training batch"""
 
-    def __init__(self, char_context_ids, context_ids, context_mask, context_tokens, char_qn_ids, qn_ids, qn_mask, qn_tokens, ans_span, ans_tokens, uuids=None):
+    def __init__(self, char_context_ids, char_context_mask, context_ids, context_mask, context_tokens, char_qn_ids, char_qn_mask, qn_ids, qn_mask, qn_tokens, ans_span, ans_tokens, uuids=None):
         """
         Inputs:
           {context/qn}_ids: Numpy arrays.
@@ -44,11 +44,13 @@ class Batch(object):
         """
         self.context_ids = context_ids
         self.char_context_ids = char_context_ids
+	self.char_context_mask = char_context_mask
         self.context_mask = context_mask
         self.context_tokens = context_tokens
 
         self.qn_ids = qn_ids
         self.char_qn_ids = char_qn_ids
+	self.char_qn_mask = char_qn_mask
         self.qn_mask = qn_mask
         self.qn_tokens = qn_tokens
 
