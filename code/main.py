@@ -59,7 +59,7 @@ tf.app.flags.DEFINE_integer("answer_len", 10, "Size of the maximum answer length
 
 # Hyperparameters for char embedding
 tf.app.flags.DEFINE_integer("max_word_size", 20, "The maximum word length for character embedding")
-tf.app.flags.DEFINE_integer("char_vocab_size", 32, "The maximum word length for character embedding")
+tf.app.flags.DEFINE_integer("char_vocab_size", 94, "The maximum word length for character embedding")
 tf.app.flags.DEFINE_integer("char_embed_size", 300, "The maximum word length for character embedding")
 tf.app.flags.DEFINE_integer("kernel_size", 5, "The kernel_size window length for character embedding")
 tf.app.flags.DEFINE_integer("filter_size", 100, "The final filter size for character embedding")
