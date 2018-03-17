@@ -117,14 +117,14 @@ class QAModel(object):
             char_context_lookup = tf.nn.embedding_lookup(char_emb_matrix, self.char_context_ids) # (batch_size, context_len, max_word_size, char_embed_size)
             char_qn_lookup = tf.nn.embedding_lookup(char_emb_matrix, self.char_qn_ids) # (batch_size, question_len, max_word_size, char_embed_size)
 
-            conv_char_context = tf.nn.conv2d(char_context_lookup, self.FLAGS.filter_size, [1, self.FLAGS.kernel_size], padding="SAME") # [batch_size, context_len, max_word_size, filter_size]
-            conv_char_qn = tf.nn.conv2d(char_qn_lookup, self.FLAGS.filter_size, [1, self.FLAGS.kernel_size], padding="SAME") # [batch_size, context_len, max_word_size, filter_size]
+            conv_char_context = tf.layers.conv2d(char_context_lookup, self.FLAGS.filter_size, [1, self.FLAGS.kernel_size], padding="SAME") # [batch_size, context_len, max_word_size, filter_size]
+            conv_char_qn = tf.layers.conv2d(char_qn_lookup, self.FLAGS.filter_size, [1, self.FLAGS.kernel_size], padding="SAME") # [batch_size, context_len, max_word_size, filter_size]
 
             conv_char_context = tf.nn.relu(conv_char_context)
             conv_qn_context = tf.nn.relu(conv_qn_context)
 
-            conv_char_context = tf.nn.conv2d(char_context_lookup, self.FLAGS.filter_size, [1, self.FLAGS.kernel_size], padding="SAME") # [batch_size, context_len, max_word_size, filter_size]
-            conv_char_qn = tf.nn.conv2d(char_qn_lookup, self.FLAGS.filter_size, [1, self.FLAGS.kernel_size], padding="SAME") # [batch_size, context_len, max_word_size, filter_size]
+            conv_char_context = tf.layers.conv2d(char_context_lookup, self.FLAGS.filter_size, [1, self.FLAGS.kernel_size], padding="SAME") # [batch_size, context_len, max_word_size, filter_size]
+            conv_char_qn = tf.layers.conv2d(char_qn_lookup, self.FLAGS.filter_size, [1, self.FLAGS.kernel_size], padding="SAME") # [batch_size, context_len, max_word_size, filter_size]
 
             self.char_context_embs = tf.reduce_max(tf.add(conv_char_context, (1 - tf.cast(self.FLAGS.char_context_mask, 'float')) * (-1e30)), axis=2)
             self.char_qn_embs = tf.reduce_max(tf.add(conv_char_qn, (1 - tf.cast(self.FLAGS.char_qn_mask, 'float')) * (-1e30)), axis=2)
