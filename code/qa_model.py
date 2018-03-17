@@ -120,12 +120,6 @@ class QAModel(object):
             conv_char_context = tf.layers.conv2d(char_context_lookup, self.FLAGS.filter_size, [1, self.FLAGS.kernel_size], padding="SAME") # [batch_size, context_len, max_word_size, filter_size]
             conv_char_qn = tf.layers.conv2d(char_qn_lookup, self.FLAGS.filter_size, [1, self.FLAGS.kernel_size], padding="SAME") # [batch_size, context_len, max_word_size, filter_size]
 
-            conv_char_context = tf.nn.relu(conv_char_context)
-            conv_char_qn = tf.nn.relu(conv_char_qn)
-
-            conv_char_context = tf.layers.conv2d(conv_char_context, self.FLAGS.filter_size, [1, self.FLAGS.kernel_size], padding="SAME") # [batch_size, context_len, max_word_size, filter_size]
-            conv_char_qn = tf.layers.conv2d(conv_char_qn, self.FLAGS.filter_size, [1, self.FLAGS.kernel_size], padding="SAME") # [batch_size, context_len, max_word_size, filter_size]
-
             self.char_context_embs = tf.reduce_max(tf.add(tf.expand_dims((1 - tf.cast(self.char_context_mask, 'float')) * (-1e30), 3), conv_char_context), axis=2)
             self.char_qn_embs = tf.reduce_max(tf.add(tf.expand_dims((1 - tf.cast(self.char_qn_mask, 'float')) * (-1e30), 3), conv_char_qn), axis=2)
 
