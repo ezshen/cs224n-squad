@@ -117,17 +117,17 @@ class QAModel(object):
             char_context_lookup = tf.nn.embedding_lookup(char_emb_matrix, self.char_context_ids) # (batch_size, context_len, max_word_size, char_embed_size)
             char_qn_lookup = tf.nn.embedding_lookup(char_emb_matrix, self.char_qn_ids) # (batch_size, question_len, max_word_size, char_embed_size)
 
-            conv_char_context1 = tf.layers.conv2d(char_context_lookup, self.FLAGS.filter_size, [1, self.FLAGS.kernel_size], padding="SAME") # [batch_size, context_len, max_word_size, filter_size]
-            conv_char_qn1 = tf.layers.conv2d(char_qn_lookup, self.FLAGS.filter_size, [1, self.FLAGS.kernel_size], padding="SAME") # [batch_size, context_len, max_word_size, filter_size]
-
-            conv_char_context = tf.nn.relu(conv_char_context1)
-            conv_qn_context = tf.nn.relu(conv_qn_context1)
-
             conv_char_context = tf.layers.conv2d(char_context_lookup, self.FLAGS.filter_size, [1, self.FLAGS.kernel_size], padding="SAME") # [batch_size, context_len, max_word_size, filter_size]
             conv_char_qn = tf.layers.conv2d(char_qn_lookup, self.FLAGS.filter_size, [1, self.FLAGS.kernel_size], padding="SAME") # [batch_size, context_len, max_word_size, filter_size]
 
-            self.char_context_embs = tf.reduce_max(tf.add(conv_char_context, (1 - tf.cast(self.FLAGS.char_context_mask, 'float')) * (-1e30)), axis=2)
-            self.char_qn_embs = tf.reduce_max(tf.add(conv_char_qn, (1 - tf.cast(self.FLAGS.char_qn_mask, 'float')) * (-1e30)), axis=2)
+            conv_char_context = tf.nn.relu(conv_char_context)
+            conv_char_qn = tf.nn.relu(conv_char_qn)
+
+            conv_char_context = tf.layers.conv2d(conv_char_context, self.FLAGS.filter_size, [1, self.FLAGS.kernel_size], padding="SAME") # [batch_size, context_len, max_word_size, filter_size]
+            conv_char_qn = tf.layers.conv2d(conv_char_qn, self.FLAGS.filter_size, [1, self.FLAGS.kernel_size], padding="SAME") # [batch_size, context_len, max_word_size, filter_size]
+
+            self.char_context_embs = tf.reduce_max(tf.add(tf.expand_dims((1 - tf.cast(self.char_context_mask, 'float')) * (-1e30), 3), conv_char_context), axis=2)
+            self.char_qn_embs = tf.reduce_max(tf.add(tf.expand_dims((1 - tf.cast(self.char_qn_mask, 'float')) * (-1e30), 3), conv_char_qn), axis=2)
 
     def add_embedding_layer(self, emb_matrix):
         """
@@ -246,18 +246,20 @@ class QAModel(object):
           gradient_norm: Global norm of the gradients
         """
         # Match up our input data with the placeholders
-        input_feed = {}
+	input_feed = {}
         input_feed[self.context_ids] = batch.context_ids
         input_feed[self.char_context_ids] = batch.char_context_ids
+        input_feed[self.char_context_mask] = batch.char_context_mask
         input_feed[self.context_mask] = batch.context_mask
+
         input_feed[self.qn_ids] = batch.qn_ids
         input_feed[self.char_qn_ids] = batch.char_qn_ids
+        input_feed[self.char_qn_mask] = batch.char_qn_mask
         input_feed[self.qn_mask] = batch.qn_mask
         input_feed[self.ans_span] = batch.ans_span
-        input_feed[self.keep_prob] = 1.0 - self.FLAGS.dropout # apply dropout
-
-        # output_feed contains the things we want to fetch.
-        output_feed = [self.updates, self.summaries, self.loss, self.global_step, self.param_norm, self.gradient_norm]
+        input_feed[self.keep_prob] = 1.0 - self.FLAGS.dropout # apply dropoutut_feed contains the things we want to fetch.
+        
+	output_feed = [self.updates, self.summaries, self.loss, self.global_step, self.param_norm, self.gradient_norm]
 
         # Run the model
         [_, summaries, loss, global_step, param_norm, gradient_norm] = session.run(output_feed, input_feed)
