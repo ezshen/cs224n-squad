@@ -39,24 +39,30 @@ logging.basicConfig(level=logging.INFO)
 class QAModel(object):
     """Top-level Question Answering module"""
 
-    def __init__(self, FLAGS, id2word, word2id, emb_matrix):
+    def __init__(self, FLAGS, id2char, char2id, char_emb_matrix, id2word, word2id, emb_matrix):
         """
         Initializes the QA model.
 
         Inputs:
           FLAGS: the flags passed in from main.py
+          id2char:
+          char2id:
+          char_emb_matrix:
           id2word: dictionary mapping word idx (int) to word (string)
           word2id: dictionary mapping word (string) to word idx (int)
           emb_matrix: numpy array shape (400002, embedding_size) containing pre-traing GloVe embeddings
         """
         print "Initializing the QAModel..."
         self.FLAGS = FLAGS
+        self.id2char = id2char
+        self.char2id = char2id
         self.id2word = id2word
         self.word2id = word2id
 
         # Add all parts of the graph
         with tf.variable_scope("QAModel", initializer=tf.contrib.layers.variance_scaling_initializer(factor=1.0, uniform=True)):
             self.add_placeholders()
+            self.add_char_embedding_layer(char_emb_matrix)
             self.add_embedding_layer(emb_matrix)
             self.build_graph()
             self.add_loss()
@@ -88,15 +94,40 @@ class QAModel(object):
         # These are all batch-first: the None corresponds to batch_size and
         # allows you to run the same model with variable batch_size
         self.context_ids = tf.placeholder(tf.int32, shape=[None, self.FLAGS.context_len])
+        self.char_context_ids = tf.placeholder(tf.int32, shape=[None, self.FLAGS.context_len, self.FLAGS.max_word_size])
         self.context_mask = tf.placeholder(tf.int32, shape=[None, self.FLAGS.context_len])
+        self.char_context_mask = tf.placeholder(tf.int32, shape=[None, self.FLAGS.context_len, self.FLAGS.max_word_size])
+
         self.qn_ids = tf.placeholder(tf.int32, shape=[None, self.FLAGS.question_len])
+        self.char_qn_ids = tf.placeholder(tf.int32, shape=[None, self.FLAGS.question_len, self.FLAGS.max_word_size])
         self.qn_mask = tf.placeholder(tf.int32, shape=[None, self.FLAGS.question_len])
+        self.char_qn_mask = tf.placeholder(tf.int32, shape=[None, self.FLAGS.question_len, self.FLAGS.max_word_size])
+
         self.ans_span = tf.placeholder(tf.int32, shape=[None, 2])
 
         # Add a placeholder to feed in the keep probability (for dropout).
         # This is necessary so that we can instruct the model to use dropout when training, but not when testing
         self.keep_prob = tf.placeholder_with_default(1.0, shape=())
 
+
+    def add_char_embedding_layer(self, char_embed_matrix):
+        with vs.variable_scope("char_embed"):
+            char_emb_matrix = tf.get_variable(initializer=char_embed_matrix, dtype=tf.float32, name="emb_matrix")
+
+            char_context_lookup = tf.nn.embedding_lookup(char_emb_matrix, self.char_context_ids) # (batch_size, context_len, max_word_size, char_embed_size)
+            char_qn_lookup = tf.nn.embedding_lookup(char_emb_matrix, self.char_qn_ids) # (batch_size, question_len, max_word_size, char_embed_size)
+
+            conv_char_context = tf.layers.conv2d(char_context_lookup, self.FLAGS.filter_size, [1, self.FLAGS.kernel_size], padding="SAME") # [batch_size, context_len, max_word_size, filter_size]
+            conv_char_qn = tf.layers.conv2d(char_qn_lookup, self.FLAGS.filter_size, [1, self.FLAGS.kernel_size], padding="SAME") # [batch_size, context_len, max_word_size, filter_size]
+
+            conv_char_context = tf.nn.relu(conv_char_context)
+            conv_char_qn = tf.nn.relu(conv_char_qn)
+
+            conv_char_context = tf.layers.conv2d(conv_char_context, self.FLAGS.filter_size, [1, self.FLAGS.kernel_size], padding="SAME") # [batch_size, context_len, max_word_size, filter_size]
+            conv_char_qn = tf.layers.conv2d(conv_char_qn, self.FLAGS.filter_size, [1, self.FLAGS.kernel_size], padding="SAME") # [batch_size, context_len, max_word_size, filter_size]
+
+            self.char_context_embs = tf.reduce_max(tf.add(tf.expand_dims((1 - tf.cast(self.char_context_mask, 'float')) * (-1e30), 3), conv_char_context), axis=2)
+            self.char_qn_embs = tf.reduce_max(tf.add(tf.expand_dims((1 - tf.cast(self.char_qn_mask, 'float')) * (-1e30), 3), conv_char_qn), axis=2)
 
     def add_embedding_layer(self, emb_matrix):
         """
@@ -115,6 +146,9 @@ class QAModel(object):
             # using the placeholders self.context_ids and self.qn_ids
             self.context_embs = embedding_ops.embedding_lookup(embedding_matrix, self.context_ids) # shape (batch_size, context_len, embedding_size)
             self.qn_embs = embedding_ops.embedding_lookup(embedding_matrix, self.qn_ids) # shape (batch_size, question_len, embedding_size)
+
+            self.context_embs = tf.concat([self.context_embs, self.char_context_embs], axis=2) # concat [(batch_size, question_len, embedding_size) (batch_size, context_len, filter_size)]
+            self.qn_embs = tf.concat([self.qn_embs, self.char_qn_embs], axis=2)
 
 
     def build_graph(self):
@@ -212,16 +246,20 @@ class QAModel(object):
           gradient_norm: Global norm of the gradients
         """
         # Match up our input data with the placeholders
-        input_feed = {}
+	input_feed = {}
         input_feed[self.context_ids] = batch.context_ids
+        input_feed[self.char_context_ids] = batch.char_context_ids
+        input_feed[self.char_context_mask] = batch.char_context_mask
         input_feed[self.context_mask] = batch.context_mask
+
         input_feed[self.qn_ids] = batch.qn_ids
+        input_feed[self.char_qn_ids] = batch.char_qn_ids
+        input_feed[self.char_qn_mask] = batch.char_qn_mask
         input_feed[self.qn_mask] = batch.qn_mask
         input_feed[self.ans_span] = batch.ans_span
-        input_feed[self.keep_prob] = 1.0 - self.FLAGS.dropout # apply dropout
+        input_feed[self.keep_prob] = 1.0 - self.FLAGS.dropout # apply dropoutut_feed contains the things we want to fetch.
 
-        # output_feed contains the things we want to fetch.
-        output_feed = [self.updates, self.summaries, self.loss, self.global_step, self.param_norm, self.gradient_norm]
+	output_feed = [self.updates, self.summaries, self.loss, self.global_step, self.param_norm, self.gradient_norm]
 
         # Run the model
         [_, summaries, loss, global_step, param_norm, gradient_norm] = session.run(output_feed, input_feed)
@@ -246,9 +284,15 @@ class QAModel(object):
 
         input_feed = {}
         input_feed[self.context_ids] = batch.context_ids
+        input_feed[self.char_context_ids] = batch.char_context_ids
+        input_feed[self.char_context_mask] = batch.char_context_mask
         input_feed[self.context_mask] = batch.context_mask
+
         input_feed[self.qn_ids] = batch.qn_ids
+        input_feed[self.char_qn_ids] = batch.char_qn_ids
+        input_feed[self.char_qn_mask] = batch.char_qn_mask
         input_feed[self.qn_mask] = batch.qn_mask
+
         input_feed[self.ans_span] = batch.ans_span
         # note you don't supply keep_prob here, so it will default to 1 i.e. no dropout
 
@@ -272,9 +316,15 @@ class QAModel(object):
         """
         input_feed = {}
         input_feed[self.context_ids] = batch.context_ids
+        input_feed[self.char_context_ids] = batch.char_context_ids
+        input_feed[self.char_context_mask] = batch.char_context_mask
         input_feed[self.context_mask] = batch.context_mask
+
         input_feed[self.qn_ids] = batch.qn_ids
+        input_feed[self.char_qn_ids] = batch.char_qn_ids
+        input_feed[self.char_qn_mask] = batch.char_qn_mask
         input_feed[self.qn_mask] = batch.qn_mask
+
         # note you don't supply keep_prob here, so it will default to 1 i.e. no dropout
 
         output_feed = [self.probdist_start, self.probdist_end]
@@ -308,7 +358,7 @@ class QAModel(object):
         prob = np.argmax(prob, axis = 1)
         start_pos = np.ndarray.astype(np.floor(np.divide(prob, self.FLAGS.context_len)), np.int32)
         end_pos = np.ndarray.astype(np.mod(prob, self.FLAGS.context_len), np.int32)
-    
+
         return start_pos, end_pos
 
 
@@ -333,7 +383,7 @@ class QAModel(object):
         # which are longer than our context_len or question_len.
         # We need to do this because if, for example, the true answer is cut
         # off the context, then the loss function is undefined.
-        for batch in get_batch_generator(self.word2id, dev_context_path, dev_qn_path, dev_ans_path, self.FLAGS.batch_size, context_len=self.FLAGS.context_len, question_len=self.FLAGS.question_len, discard_long=True):
+        for batch in get_batch_generator(self.char2id, self.word2id, dev_context_path, dev_qn_path, dev_ans_path, self.FLAGS.batch_size, max_word_size=self.FLAGS.max_word_size, context_len=self.FLAGS.context_len, question_len=self.FLAGS.question_len, discard_long=True):
 
             # Get loss for this batch
             loss = self.get_loss(session, batch)
@@ -388,7 +438,7 @@ class QAModel(object):
 
         # Note here we select discard_long=False because we want to sample from the entire dataset
         # That means we're truncating, rather than discarding, examples with too-long context or questions
-        for batch in get_batch_generator(self.word2id, context_path, qn_path, ans_path, self.FLAGS.batch_size, context_len=self.FLAGS.context_len, question_len=self.FLAGS.question_len, discard_long=False):
+        for batch in get_batch_generator(self.char2id, self.word2id, context_path, qn_path, ans_path, self.FLAGS.batch_size, max_word_size=self.FLAGS.max_word_size, context_len=self.FLAGS.context_len, question_len=self.FLAGS.question_len, discard_long=False):
 
             pred_start_pos, pred_end_pos = self.get_start_end_pos(session, batch)
 
@@ -471,7 +521,7 @@ class QAModel(object):
             epoch_tic = time.time()
 
             # Loop over batches
-            for batch in get_batch_generator(self.word2id, train_context_path, train_qn_path, train_ans_path, self.FLAGS.batch_size, context_len=self.FLAGS.context_len, question_len=self.FLAGS.question_len, discard_long=True):
+            for batch in get_batch_generator(self.char2id, self.word2id, train_context_path, train_qn_path, train_ans_path, self.FLAGS.batch_size, max_word_size=self.FLAGS.max_word_size, context_len=self.FLAGS.context_len, question_len=self.FLAGS.question_len, discard_long=True):
 
                 # Run training iteration
                 iter_tic = time.time()
