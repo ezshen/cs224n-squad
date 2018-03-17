@@ -117,11 +117,11 @@ class QAModel(object):
             char_context_lookup = tf.nn.embedding_lookup(char_emb_matrix, self.char_context_ids) # (batch_size, context_len, max_word_size, char_embed_size)
             char_qn_lookup = tf.nn.embedding_lookup(char_emb_matrix, self.char_qn_ids) # (batch_size, question_len, max_word_size, char_embed_size)
 
-            conv_char_context = tf.layers.conv2d(char_context_lookup, self.FLAGS.filter_size, [1, self.FLAGS.kernel_size], padding="SAME") # [batch_size, context_len, max_word_size, filter_size]
-            conv_char_qn = tf.layers.conv2d(char_qn_lookup, self.FLAGS.filter_size, [1, self.FLAGS.kernel_size], padding="SAME") # [batch_size, context_len, max_word_size, filter_size]
+            conv_char_context1 = tf.layers.conv2d(char_context_lookup, self.FLAGS.filter_size, [1, self.FLAGS.kernel_size], padding="SAME") # [batch_size, context_len, max_word_size, filter_size]
+            conv_char_qn1 = tf.layers.conv2d(char_qn_lookup, self.FLAGS.filter_size, [1, self.FLAGS.kernel_size], padding="SAME") # [batch_size, context_len, max_word_size, filter_size]
 
-            conv_char_context = tf.nn.relu(conv_char_context)
-            conv_qn_context = tf.nn.relu(conv_qn_context)
+            conv_char_context = tf.nn.relu(conv_char_context1)
+            conv_qn_context = tf.nn.relu(conv_qn_context1)
 
             conv_char_context = tf.layers.conv2d(char_context_lookup, self.FLAGS.filter_size, [1, self.FLAGS.kernel_size], padding="SAME") # [batch_size, context_len, max_word_size, filter_size]
             conv_char_qn = tf.layers.conv2d(char_qn_lookup, self.FLAGS.filter_size, [1, self.FLAGS.kernel_size], padding="SAME") # [batch_size, context_len, max_word_size, filter_size]
