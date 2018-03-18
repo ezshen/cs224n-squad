@@ -44,13 +44,13 @@ class Batch(object):
         """
         self.context_ids = context_ids
         self.char_context_ids = char_context_ids
-	self.char_context_mask = char_context_mask
+	    self.char_context_mask = char_context_mask
         self.context_mask = context_mask
         self.context_tokens = context_tokens
 
         self.qn_ids = qn_ids
         self.char_qn_ids = char_qn_ids
-	self.char_qn_mask = char_qn_mask
+	    self.char_qn_mask = char_qn_mask
         self.qn_mask = qn_mask
         self.qn_tokens = qn_tokens
 
@@ -156,7 +156,6 @@ def refill_batches(batches, char2id, word2id, context_file, qn_file, ans_file, b
             else: # truncate
                 qn_ids = qn_ids[:question_len]
                 char_qn_ids = char_qn_ids[:question_len]
-
 
         # discard or truncate too-long contexts
         if len(context_ids) > context_len:
