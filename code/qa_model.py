@@ -112,7 +112,7 @@ class QAModel(object):
 
     def add_char_embedding_layer(self, char_embed_matrix):
         with vs.variable_scope("char_embed"):
-            char_emb_matrix = tf.get_variable(initializer=char_embed_matrix, dtype=tf.float32, name="emb_matrix")
+            char_emb_matrix = tf.get_variable(shape=char_embed_matrix.shape, initializer=tf.contrib.layers.xavier_initializer(), dtype=tf.float32, name="emb_matrix")
 
             char_context_lookup = tf.nn.embedding_lookup(char_emb_matrix, self.char_context_ids) # (batch_size, context_len, max_word_size, char_embed_size)
             char_qn_lookup = tf.nn.embedding_lookup(char_emb_matrix, self.char_qn_ids) # (batch_size, question_len, max_word_size, char_embed_size)
