@@ -69,7 +69,7 @@ tf.app.flags.DEFINE_string("glove_path", "", "Path to glove .txt file. Defaults 
 tf.app.flags.DEFINE_string("data_dir", DEFAULT_DATA_DIR, "Where to find preprocessed SQuAD data for training. Defaults to data/")
 tf.app.flags.DEFINE_string("ckpt_load_dir", "", "For official_eval mode, which directory to load the checkpoint fron. You need to specify this for official_eval mode.")
 tf.app.flags.DEFINE_string("json_in_path", "", "For official_eval mode, path to JSON input file. You need to specify this for official_eval_mode.")
-tf.app.flags.DEFINE_string("json_out_path", "predictions.json", "Output path for official_eval mode. Defaults to predictions.json")
+tf.app.flags.DEFINE_string("json_out_path", "predictions_{experiment_name}.json", "Output path for official_eval mode. Defaults to predictions_{experiment_name}.json")
 
 
 FLAGS = tf.app.flags.FLAGS

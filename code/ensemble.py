@@ -2,6 +2,19 @@ from collections import Counter
 from itertools import groupby
 import numpy as np
 
+def get_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('paths', nargs='+')
+    parser.add_argument('-o', '--output_file', default='predictions.json')
+    parser.add_argument("--data_path", default="data/squad/data_test.json")
+    parser.add_argument("--shared_path", default="data/squad/shared_test.json")
+    args = parser.parse_args()
+    return args
+
+
+
+
+
 def final_start_end(start_pos, end_pos):
 	final_start = np.zeros(start_pos.shape[0])
 	final_end = np.zeros(end_pos.shape[0])
