@@ -44,13 +44,13 @@ class Batch(object):
         """
         self.context_ids = context_ids
         self.char_context_ids = char_context_ids
-	    self.char_context_mask = char_context_mask
+	self.char_context_mask = char_context_mask
         self.context_mask = context_mask
         self.context_tokens = context_tokens
 
         self.qn_ids = qn_ids
         self.char_qn_ids = char_qn_ids
-	    self.char_qn_mask = char_qn_mask
+	self.char_qn_mask = char_qn_mask
         self.qn_mask = qn_mask
         self.qn_tokens = qn_tokens
 
