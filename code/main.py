@@ -77,8 +77,8 @@ tf.app.flags.DEFINE_string("glove_char_path", "", "Path to glove char .txt file.
 tf.app.flags.DEFINE_string("data_dir", DEFAULT_DATA_DIR, "Where to find preprocessed SQuAD data for training. Defaults to data/")
 tf.app.flags.DEFINE_string("ckpt_load_dir", "", "For official_eval mode, which directory to load the checkpoint fron. You need to specify this for official_eval mode.")
 tf.app.flags.DEFINE_string("json_in_path", "", "For official_eval mode, path to JSON input file. You need to specify this for official_eval_mode.")
-tf.app.flags.DEFINE_string("json_out_path", "predictions_{experiment_name}.json", "Output path for official_eval mode. Defaults to predictions_{experiment_name}.json")
-tf.app.flags.DEFINE_string("json_span_out_path", "predictions_{experiment_name}_span.json", "Output path for span of predictions for official_eval mode. Defaults to predictions_{experiment_name}_span.json")
+tf.app.flags.DEFINE_string("json_out_path", "", "Output path for official_eval mode. Defaults to predictions.json in experiments folder")
+tf.app.flags.DEFINE_string("json_span_out_path", "", "Output path for span of predictions for official_eval mode. Defaults to predictions_span.json in experiments folder")
 
 FLAGS = tf.app.flags.FLAGS
 os.environ["CUDA_VISIBLE_DEVICES"] = str(FLAGS.gpu)
@@ -126,6 +126,10 @@ def main(unused_argv):
     if not FLAGS.experiment_name and not FLAGS.train_dir and FLAGS.mode != "official_eval":
         raise Exception("You need to specify either --experiment_name or --train_dir")
     FLAGS.train_dir = FLAGS.train_dir or os.path.join(EXPERIMENTS_DIR, FLAGS.experiment_name)
+
+    # Define output file names
+    FLAGS.json_out_path = FLAGS.json_out_path or os.path.join(EXPERIMENTS_DIR, FLAGS.experiment_name, 'predictions.json')
+    FLAGS.json_span_out_path = FLAGS.json_span_out_path or os.path.join(EXPERIMENTS_DIR, FLAGS.experiment_name, 'predictions_span.json')
 
     # Initialize bestmodel directory
     bestmodel_dir = os.path.join(FLAGS.train_dir, "best_checkpoint")
