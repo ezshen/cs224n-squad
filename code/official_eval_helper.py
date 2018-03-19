@@ -38,8 +38,6 @@ def readnext(x):
     else:
         return x.pop(0)
 
-
-
 def refill_batches(batches, word2id, qn_uuid_data, context_token_data, qn_token_data, batch_size, context_len, question_len):
     """
     This is similar to refill_batches in data_batcher.py, but:
@@ -238,6 +236,7 @@ def generate_answers(session, model, word2id, qn_uuid_data, context_token_data, 
       uuid2ans: dictionary mapping uuid (string) to predicted answer (string; detokenized)
     """
     uuid2ans = {} # maps uuid to string containing predicted answer
+    uuid2pred_span = {}
     data_size = len(qn_uuid_data)
     num_batches = ((data_size-1) / model.FLAGS.batch_size) + 1
     batch_num = 0
@@ -271,6 +270,9 @@ def generate_answers(session, model, word2id, qn_uuid_data, context_token_data, 
             uuid = batch.uuids[ex_idx]
             uuid2ans[uuid] = detokenizer.detokenize(pred_ans_tokens, return_str=True)
 
+            # Add pred_start, pred_end tuple to span dict for ensemble
+            uuid2pred_span[uuid] = (pred_start, pred_end)
+
         batch_num += 1
 
         if batch_num % 10 == 0:
@@ -278,4 +280,4 @@ def generate_answers(session, model, word2id, qn_uuid_data, context_token_data, 
 
     print "Finished generating answers for dataset."
 
-    return uuid2ans
+    return uuid2ans, uuid2pred_span

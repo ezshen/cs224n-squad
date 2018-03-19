@@ -1,58 +1,51 @@
 from collections import Counter
 from itertools import groupby
-import numpy as np
 import argparse
 import json
 from tqdm import tqdm
-
+import random
 
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('paths', nargs='+')
-    # parser.add_argument('-o', '--output_file', default='ensemble_predictions.json')
-    # parser.add_argument("--data_path", default="data/squad/data_test.json")
-    # parser.add_argument("--shared_path", default="data/squad/shared_test.json")
+    parser.add_argument('-o', '--output_file', default='ensemble_predictions.json')
+    parser.add_argument("--json_in_path", default="dev-v1.1.json")
     args = parser.parse_args()
     return args
 
+def get_tokens(token_data)
+	tokens = []
+	while True:
+		tok = readnext(token_data)
+		if !tok:
+			break
+		tokens.append(tok)
+
 def ensemble(args):
-	model_preds = []
+	qn_uuid_data, context_token_data, _ = get_json_data(args.json_in_path)
+
+	context_tokens = get_tokens(context_token_data)
+	qn_uuid_tokens = get_tokens(qn_uuid_data)
+	uuid2context = dict(zip(qn_uuid_tokens, context_tokens))
+
+	model_preds = {}
 	for path in tqdm(args.paths):
-		with open(path, 'r') as pred:
-			model_preds.append(json.load(pred))
+		with open(path, 'r') as fh:
+			preds = json.load(fh)
+			for uuid, pred in preds.iteritems():
+				model_preds.setdefault(uuid, []).append(pred)
 
+	assert len(context_tokens) == len(qn_uuid_tokens)
+	assert len(qn_uuid_tokens) == len(model_preds)
 
+	final_pred = {}
+	for uuid, preds in tqdm(model_preds.iteritems()):
+		pred_start, pred_end = max_vote(preds)
+		final_pred[uuid] = uuid2context[uuid][pred_start: pred_end+1]
 
-
-
-# def final_start_end(start_pos, end_pos):
-# 	final_start = np.zeros(start_pos.shape[0])
-# 	final_end = np.zeros(end_pos.shape[0])
-# 	for i in range(len(final_start)):
-# 		possible_start_pos = start_pos[i]
-# 		possible_end_pos = end_pos[i]
-# 		freqs_start = groupby(Counter(possible_start_pos).most_common(), lambda x:x[1])
-# 		start_choices = np.asarray([val for val,count in freqs_start.next()[1]])
-# 		freqs_end = groupby(Counter(possible_end_pos).most_common(), lambda x:x[1])
-# 		end_choices = np.asarray([val for val,count in freqs_end.next()[1]])
-# 		if len(end_choices) >= len(start_choices):
-# 			start = np.random.choice(start_choices)
-# 			possible_end_pos = possible_end_pos[np.where(possible_start_pos == start)]
-# 			freqs_end = groupby(Counter(possible_end_pos).most_common(), lambda x:x[1])
-# 			end = np.random.choice(np.asarray([val for val,count in freqs_end.next()[1]]))
-# 		else:
-# 			end = np.random.choice(end_choices)
-# 			possible_start_pos = possible_start_pos[np.where(possible_end_pos == end)]
-# 			freqs_start = groupby(Counter(possible_start_pos).most_common(), lambda x:x[1])
-# 			start = np.random.choice(np.asarray([val for val,count in freqs_start.next()[1]]))
-# 		final_start[i], final_end[i] = start, end
-# 	return final_start, final_end
-
-# start_pos = np.asarray([[3, 4, 4, 4, 4, 7, 3, 3, 3,], [5, 5, 6, 7, 8, 1, 2, 3, 4], [1, 1, 2, 2, 3, 3, 4, 4, 5]])
-# end_pos = np.asarray([[5, 4, 4, 4, 4, 5, 5, 5, 5], [2, 2, 3, 3, 1, 4, 6, 7, 8], [1, 2, 3, 4, 5, 6, 7, 8, 9]])
-
-# print final_start_end(start_pos, end_pos)
-
+def max_vote(preds):
+	freq = groupby(Counter(preds).most_common(), lambda x:x[1])
+	return random.choice([val for val,count in freq.next()[1]])
 
 def main():
     args = get_args()
