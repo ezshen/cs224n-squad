@@ -9,7 +9,7 @@ from official_eval_helper import get_json_data, readnext
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('paths', nargs='+')
-    parser.add_argument('-o', '--output_file', default='ensemble_predictions.json')
+    parser.add_argument('--output_file', default='ensemble_predictions.json')
     parser.add_argument("--json_in_path", default="dev-v1.1.json")
     args = parser.parse_args()
     return args
@@ -25,7 +25,7 @@ def get_tokens(token_data):
 
 def ensemble(args):
     qn_uuid_data, context_token_data, _ = get_json_data(args.json_in_path)
-    
+
     context_tokens = get_tokens(context_token_data)
     qn_uuid_tokens = get_tokens(qn_uuid_data)
     uuid2context = dict(zip(qn_uuid_tokens, context_tokens))
@@ -44,6 +44,11 @@ def ensemble(args):
     for uuid, preds in tqdm(model_preds.iteritems()):
 	pred_start, pred_end = max_vote(preds)
         final_pred[uuid] = uuid2context[uuid][pred_start: pred_end+1]
+
+    print "writing output file..."
+    with open(args.output_file, 'w') as fh:
+        json.dump(final_pred, fh)
+
 
 def max_vote(preds):
     freq = groupby(Counter(preds).most_common(), lambda x:x[1])
