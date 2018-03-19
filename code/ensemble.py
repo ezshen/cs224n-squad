@@ -34,7 +34,6 @@ def ensemble(args):
     for path in tqdm(args.paths):
         with open(path, 'r') as fh:
             preds = json.load(fh)
-            print preds
 	    for uuid, pred in preds.iteritems():
                 model_preds.setdefault(uuid, []).append(tuple(pred))
 
@@ -43,8 +42,6 @@ def ensemble(args):
 
     final_pred = {}
     for uuid, preds in tqdm(model_preds.iteritems()):
-        print uuid, preds
-
 	pred_start, pred_end = max_vote(preds)
         final_pred[uuid] = uuid2context[uuid][pred_start: pred_end+1]
 
