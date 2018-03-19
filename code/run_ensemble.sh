@@ -31,3 +31,15 @@ wait
 
 # Ensemble
 python ensemble.py $eargs --json_in_path=../data/$source_file --output_file=../$target_file
+
+# Evaluate
+for exp in "${experiments[@]}"; do
+    echo "running eval for $exp..."
+    python evaluate.py ../data/$source_file.json ../experiments/$exp/predictions.json
+    fi
+done
+wait
+
+# Ensemble prediction
+echo "final ensemble eval..."
+python evaluate.py ../data/$source_file.json ../$target_file
