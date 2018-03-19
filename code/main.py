@@ -67,7 +67,7 @@ tf.app.flags.DEFINE_integer("filter_size", 100, "The final filter size for chara
 # How often to print, save, eval
 tf.app.flags.DEFINE_integer("print_every", 1, "How many iterations to do per print.")
 tf.app.flags.DEFINE_integer("save_every", 500, "How many iterations to do per save.")
-tf.app.flags.DEFINE_integer("eval_every", 500, "How many iterations to do per calculating loss/f1/em on dev set. Warning: this is fairly time-consuming so don't do it too often.")
+tf.app.flags.DEFINE_integer("eval_every", 5000, "How many iterations to do per calculating loss/f1/em on dev set. Warning: this is fairly time-consuming so don't do it too often.")
 tf.app.flags.DEFINE_integer("keep", 1, "How many checkpoints to keep. 0 indicates keep all (you shouldn't need to do keep all though - it's very storage intensive).")
 
 # Reading and saving data
@@ -77,8 +77,8 @@ tf.app.flags.DEFINE_string("glove_char_path", "", "Path to glove char .txt file.
 tf.app.flags.DEFINE_string("data_dir", DEFAULT_DATA_DIR, "Where to find preprocessed SQuAD data for training. Defaults to data/")
 tf.app.flags.DEFINE_string("ckpt_load_dir", "", "For official_eval mode, which directory to load the checkpoint fron. You need to specify this for official_eval mode.")
 tf.app.flags.DEFINE_string("json_in_path", "", "For official_eval mode, path to JSON input file. You need to specify this for official_eval_mode.")
-tf.app.flags.DEFINE_string("json_out_path", "predictions.json", "Output path for official_eval mode. Defaults to predictions.json")
-
+tf.app.flags.DEFINE_string("json_out_path", "", "Output path for official_eval mode. Defaults to predictions.json in experiments folder")
+tf.app.flags.DEFINE_string("json_span_out_path", "", "Output path for span of predictions for official_eval mode. Defaults to predictions_span.json in experiments folder")
 
 FLAGS = tf.app.flags.FLAGS
 os.environ["CUDA_VISIBLE_DEVICES"] = str(FLAGS.gpu)
@@ -126,6 +126,10 @@ def main(unused_argv):
     if not FLAGS.experiment_name and not FLAGS.train_dir and FLAGS.mode != "official_eval":
         raise Exception("You need to specify either --experiment_name or --train_dir")
     FLAGS.train_dir = FLAGS.train_dir or os.path.join(EXPERIMENTS_DIR, FLAGS.experiment_name)
+
+    # Define output file names
+    FLAGS.json_out_path = FLAGS.json_out_path or os.path.join(EXPERIMENTS_DIR, FLAGS.experiment_name, 'predictions.json')
+    FLAGS.json_span_out_path = FLAGS.json_span_out_path or os.path.join(EXPERIMENTS_DIR, FLAGS.experiment_name, 'predictions_span.json')
 
     # Initialize bestmodel directory
     bestmodel_dir = os.path.join(FLAGS.train_dir, "best_checkpoint")
@@ -185,7 +189,7 @@ def main(unused_argv):
             initialize_model(sess, qa_model, bestmodel_dir, expect_exists=True)
 
             # Show examples with F1/EM scores
-            _, _ = qa_model.check_f1_em(sess, dev_context_path, dev_qn_path, dev_ans_path, "dev", num_samples=10, print_to_screen=True)
+            _, _ = qa_model.check_f1_em(sess, dev_context_path, dev_qn_path, dev_ans_path, "dev", num_samples=100, print_to_screen=True)
 
 
     elif FLAGS.mode == "official_eval":
@@ -204,14 +208,19 @@ def main(unused_argv):
 
             # Get a predicted answer for each example in the data
             # Return a mapping answers_dict from uuid to answer
-            answers_dict = generate_answers(sess, qa_model, char2id, word2id, qn_uuid_data, context_token_data, qn_token_data)
+            answers_dict, answer_spans_dict = generate_answers(sess, qa_model, char2id, word2id, qn_uuid_data, context_token_data, qn_token_data)
+
+            # Write uuid->answer span indices mapping to a json file
+            print "Writing span index predictions to %s..." % FLAGS.json_span_out_path
+            with io.open(FLAGS.json_span_out_path, 'w', encoding='utf-8') as f:
+                f.write(unicode(json.dumps(answer_spans_dict, ensure_ascii=False)))
+                print "Wrote predictions to %s" % FLAGS.json_span_out_path
 
             # Write the uuid->answer mapping a to json file in root dir
             print "Writing predictions to %s..." % FLAGS.json_out_path
             with io.open(FLAGS.json_out_path, 'w', encoding='utf-8') as f:
                 f.write(unicode(json.dumps(answers_dict, ensure_ascii=False)))
                 print "Wrote predictions to %s" % FLAGS.json_out_path
-
 
     else:
         raise Exception("Unexpected value of FLAGS.mode: %s" % FLAGS.mode)
