@@ -4,7 +4,7 @@ import argparse
 import json
 from tqdm import tqdm
 import random
-from official_eval_helper import get_json_data
+from official_eval_helper import get_json_data, readnext
 
 def get_args():
     parser = argparse.ArgumentParser()
@@ -14,11 +14,11 @@ def get_args():
     args = parser.parse_args()
     return args
 
-def get_tokens(token_data)
+def get_tokens(token_data):
     tokens = []
     while True:
         tok = readnext(token_data)
-        if !tok:
+        if not tok:
             break
         tokens.append(tok)
 
