@@ -5,6 +5,7 @@ import json
 from tqdm import tqdm
 import random
 from official_eval_helper import get_json_data, readnext
+import io
 
 def get_args():
     parser = argparse.ArgumentParser()
@@ -43,12 +44,11 @@ def ensemble(args):
     final_pred = {}
     for uuid, preds in tqdm(model_preds.iteritems()):
 	pred_start, pred_end = max_vote(preds)
-        final_pred[uuid] = uuid2context[uuid][pred_start: pred_end+1]
+        final_pred[uuid] = " ".join(uuid2context[uuid][pred_start: pred_end+1])
 
     print "writing output file..."
-    with open(args.output_file, 'w') as fh:
-        json.dump(final_pred, fh)
-
+    with io.open(args.output_file, 'w', encoding='utf-8') as f:
+    	f.write(unicode(json.dumps(final_pred, ensure_ascii=False)))
 
 def max_vote(preds):
     freq = groupby(Counter(preds).most_common(), lambda x:x[1])
