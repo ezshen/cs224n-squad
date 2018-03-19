@@ -157,7 +157,6 @@ def refill_batches(batches, char2id, word2id, context_file, qn_file, ans_file, b
                 qn_ids = qn_ids[:question_len]
                 char_qn_ids = char_qn_ids[:question_len]
 
-
         # discard or truncate too-long contexts
         if len(context_ids) > context_len:
             if discard_long:
