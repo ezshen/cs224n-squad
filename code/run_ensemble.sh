@@ -11,7 +11,10 @@ declare -a experiments=(
                 "bidaf_charcnn_train4"
                 "bidaf_charcnn_train5"
                 "bidaf_charcnn_train6"
-                # "bidaf_charcnn_train_singlelayer1"
+                "bidaf_charcnn_train_singlelayer1"
+                "bidaf_charcnn_train_singlelayer2"
+                "bidaf_charcnn_train_singlelayer3"
+                # "bidaf_charcnn_train_xavier"
                 )
 
 eargs=""
