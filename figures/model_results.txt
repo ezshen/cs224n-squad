@@ -1,3 +1,5 @@
+ensemble:
+
 running eval for bidaf_charcnn_train1...
 {"f1": 76.10005712462126, "exact_match": 66.23462630085146}
 running eval for bidaf_charcnn_train2...
@@ -20,3 +22,10 @@ running eval for bidaf_charcnn_train_xavier...
 {"f1": 75.15889988296364, "exact_match": 65.22232734153263}
 final ensemble eval...
 {"f1": 77.84745447541049, "exact_match": 68.39167455061495}
+
+single:
+bidaf_ensemble: {"f1": 77.84745447541049, "exact_match": 68.39167455061495}
+bidaf_charcnn_train1 (cnn, span): {"f1": 76.10005712462126, "exact_match": 66.23462630085146}
+bidaf (cnn, no span): {"f1": 73.5328033375961, "exact_match": 63.755912961210974}
+bidaf_paper (no cnn, no span): {"f1": 69.37189059217305, "exact_match": 58.10785241248817}
+baseline: {"f1": 44.21548247830744, "exact_match": 35.07015231829169}
