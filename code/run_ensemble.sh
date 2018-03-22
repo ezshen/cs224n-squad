@@ -20,7 +20,7 @@ eargs=""
 for exp in "${experiments[@]}"; do
     eval_path="../experiments/$exp/predictions_span.json"
     eargs="$eargs $eval_path"
-    if [  $rerun ]
+    if [ ! $rerun ]
     then
         echo "running official_eval for $exp..."
         python main.py --experiment_name=$exp --mode=official_eval --json_in_path=../data/$source_file --ckpt_load_dir=../experiments/$exp/best_checkpoint
@@ -30,14 +30,3 @@ wait
 
 # Ensemble
 python ensemble.py $eargs --json_in_path=../data/$source_file --output_file=../$target_file
-
-# Evaluate
-for exp in "${experiments[@]}"; do
-    echo "running eval for $exp..."
-    python evaluate.py ../data/$source_file ../experiments/$exp/predictions.json
-done
-wait
-
-# Ensemble prediction
-echo "final ensemble eval..."
-python evaluate.py ../data/$source_file ../$target_file
