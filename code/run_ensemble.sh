@@ -18,15 +18,15 @@ declare -a experiments=(
 
 eargs=""
 for exp in "${experiments[@]}"; do
-    eval_path="../experiments/$exp/predictions_span.json"
+    eval_path="experiments/$exp/predictions_span.json"
     eargs="$eargs $eval_path"
     if [ ! $rerun ]
     then
         echo "running official_eval for $exp..."
-        python main.py --experiment_name=$exp --mode=official_eval --json_in_path=../data/$source_file --ckpt_load_dir=../experiments/$exp/best_checkpoint
+        python main.py --experiment_name=$exp --mode=official_eval --json_in_path=data/$source_file --ckpt_load_dir=experiments/$exp/best_checkpoint
     fi
 done
 wait
 
 # Ensemble
-python ensemble.py $eargs --json_in_path=../data/$source_file --output_file=../$target_file
+python ensemble.py $eargs --json_in_path=data/$source_file --output_file=$target_file
