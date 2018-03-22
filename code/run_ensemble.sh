@@ -29,4 +29,4 @@ done
 wait
 
 # Ensemble
-python ensemble.py $eargs --json_in_path=data/$source_file --output_file=$target_file
+python code/ensemble.py $eargs --json_in_path=data/dev-v1.1.json --output_file=$target_file
