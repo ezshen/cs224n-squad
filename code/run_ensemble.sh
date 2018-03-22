@@ -23,10 +23,10 @@ for exp in "${experiments[@]}"; do
     if [ ! $rerun ]
     then
         echo "running official_eval for $exp..."
-        python code/main.py --experiment_name=$exp --mode=official_eval --json_in_path=data/$source_file --ckpt_load_dir=best_checkpoint
+        python code/main.py --experiment_name=$exp --mode=official_eval --glove_path=glove.txt --json_in_path=data.json --ckpt_load_dir=best_checkpoint --glove_char_path=glove.840B.300d-char.txt
     fi
 done
 wait
 
 # Ensemble
-python code/ensemble.py $eargs --json_in_path=data/$source_file --output_file=$target_file
+python code/ensemble.py $eargs --json_in_path=data.json --output_file=$target_file
