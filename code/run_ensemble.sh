@@ -4,7 +4,6 @@ target_file=$2
 rerun=$3
 
 declare -a experiments=(
-                # "bidaf_charcnn_train"
                 "bidaf_charcnn_train1"
                 "bidaf_charcnn_train2"
                 "bidaf_charcnn_train3"
@@ -14,14 +13,14 @@ declare -a experiments=(
                 "bidaf_charcnn_train_singlelayer1"
                 "bidaf_charcnn_train_singlelayer2"
                 "bidaf_charcnn_train_singlelayer3"
-                # "bidaf_charcnn_train_xavier"
+                "bidaf_charcnn_train_xavier"
                 )
 
 eargs=""
 for exp in "${experiments[@]}"; do
     eval_path="../experiments/$exp/predictions_span.json"
     eargs="$eargs $eval_path"
-    if [ ! $rerun]
+    if [  $rerun ]
     then
         echo "running official_eval for $exp..."
         python main.py --experiment_name=$exp --mode=official_eval --json_in_path=../data/$source_file --ckpt_load_dir=../experiments/$exp/best_checkpoint
@@ -35,11 +34,10 @@ python ensemble.py $eargs --json_in_path=../data/$source_file --output_file=../$
 # Evaluate
 for exp in "${experiments[@]}"; do
     echo "running eval for $exp..."
-    python evaluate.py ../data/$source_file.json ../experiments/$exp/predictions.json
-    fi
+    python evaluate.py ../data/$source_file ../experiments/$exp/predictions.json
 done
 wait
 
 # Ensemble prediction
 echo "final ensemble eval..."
-python evaluate.py ../data/$source_file.json ../$target_file
+python evaluate.py ../data/$source_file ../$target_file
