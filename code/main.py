@@ -80,6 +80,10 @@ tf.app.flags.DEFINE_string("json_in_path", "", "For official_eval mode, path to 
 tf.app.flags.DEFINE_string("json_out_path", "", "Output path for official_eval mode. Defaults to predictions.json in experiments folder")
 tf.app.flags.DEFINE_string("json_span_out_path", "", "Output path for span of predictions for official_eval mode. Defaults to predictions_span.json in experiments folder")
 
+# Type of Model
+tf.app.flags.DEFINE_string("model_type", "bidaf", "Type of attention model to use, defaults to bidaf. Use either baseline coattn selfattn bidaf")
+
+
 FLAGS = tf.app.flags.FLAGS
 os.environ["CUDA_VISIBLE_DEVICES"] = str(FLAGS.gpu)
 
@@ -150,7 +154,16 @@ def main(unused_argv):
     dev_ans_path = os.path.join(FLAGS.data_dir, "dev.span")
 
     # Initialize model
-    qa_model = BiDAFModel(FLAGS, id2char, char2id, char_emb_matrix, id2word, word2id, emb_matrix)
+    if FLAGS.model_type == 'baseline':
+        qa_model = QAModel(FLAGS, id2char, char2id, char_emb_matrix, id2word, word2id, emb_matrix)
+    elif FLAGS.model_type == 'coattn':
+        qa_model = CoAttnModel(FLAGS, id2char, char2id, char_emb_matrix, id2word, word2id, emb_matrix)
+    elif FLAGS.model_type == 'selfattn':
+        qa_model = SelfAttnModel(FLAGS, id2char, char2id, char_emb_matrix, id2word, word2id, emb_matrix)
+    elif FLAGS.model_type == 'bidaf':
+        qa_model = BiDAFModel(FLAGS, id2char, char2id, char_emb_matrix, id2word, word2id, emb_matrix)
+    else:
+        raise Exception("Specify a valid model type.")
 
     # Some GPU settings
     config=tf.ConfigProto()
