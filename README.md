@@ -42,7 +42,7 @@ We adapt a self-attention layer from the recently published paper [“r-net:  Ma
 | ensemble | 67.7   | 77.1   |
 
 Refer to our paper for more details.
-See [SQuAD Leaderboard](https://rajpurkar.github.io/SQuAD-explorer/)to compare with other models.
+See [SQuAD Leaderboard](https://rajpurkar.github.io/SQuAD-explorer/) to compare with other models.
 
 ## Installation
 
