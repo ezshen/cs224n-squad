@@ -92,5 +92,5 @@ To run the ensembling for multiple experiments, modify the `run_ensemble.sh` bas
 
 ## Paper
 
-Our paper can be found [here](http://web.stanford.edu/class/cs224n/reports/6857497.pdf), and our poster can be found [here](https://ezshen.github.io/files/cs224n_final_poster.pdf).
+Our paper can be found [here](https://ezshen.github.io/files/cs224n_final_report.pdf), and our poster can be found [here](https://ezshen.github.io/files/cs224n_final_poster.pdf).
 
